@@ -1,0 +1,8 @@
+streamlit
+flask
+flask-mail
+python-dotenv
+reportlab
+flask-socketio
+mailjet-rest
+eventlet
