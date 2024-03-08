@@ -4,7 +4,7 @@ class Player:
     def __init__(self, name, picture, anonymous=False):
         self.name = name or "Anonymous"
         self.picture = picture
-        self.score = 501 if self.name != "Anonymous" else 0
+        self.score = 501 if not anonymous else 0
         self.anonymous = anonymous
 
 def main():
@@ -13,9 +13,15 @@ def main():
     name = st.text_input("Enter your name (optional):", "Anonymous")
     picture = st.file_uploader("Upload Picture (optional):", type=["jpg", "png"])
 
+    if name:
+        anonymous = False
+    else:
+        st.warning("Anonymous users cannot play scoring games.")
+        anonymous = True
+
     game_option = st.selectbox("Select the game you want to play:", ["Bullseye Measurement", "501", "301", "Cricket"])
 
-    player = Player(name, picture)
+    player = Player(name, picture, anonymous)
     st.success(f"Player {player.name} registered!")
 
     if player.score == 0:
