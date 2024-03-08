@@ -51,6 +51,9 @@ class DartGameApp:
         self.message_label = tk.Label(self.root, text="Waiting for user input...")
         self.message_label.pack()
 
+        self.result_label = tk.Label(self.root, text="")
+        self.result_label.pack()
+
     def initialize_speech_recognition(self):
         self.recognizer = sr.Recognizer()
         self.update_timer = self.root.after(5000, self.update_progress_and_message)
@@ -127,7 +130,4 @@ class DartGameApp:
 
     def listen_and_process_speech(self):
         with sr.Microphone() as source:
-            self.recognizer.adjust_for_ambient_noise(source)
-            try:
-                audio = self.recognizer.listen(source)
-                text
+            self.recognizer
