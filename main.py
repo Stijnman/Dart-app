@@ -23,36 +23,33 @@ class DartGameApp:
         self.initialize_speech_recognition()
 
     def initialize_ui(self):
-        self.label_name = tk.Label(self.root, text="Enter your name (optional):")
-        self.label_name.pack()
-        self.entry_name = tk.Entry(self.root)
-        self.entry_name.pack()
+        self.name_var = tk.StringVar()
+        self.name_entry = tk.Entry(self.root, textvariable=self.name_var)
+        self.name_entry.pack()
 
-        self.button_browse = tk.Button(self.root, text="Browse Picture", command=self.browse_picture)
-        self.button_browse.pack()
+        self.picture_button = tk.Button(self.root, text="Browse Picture", command=self.browse_picture)
+        self.picture_button.pack()
 
-        self.button_register = tk.Button(self.root, text="Register (optional)", command=self.register_player)
-        self.button_register.pack()
+        self.register_button = tk.Button(self.root, text="Register", command=self.register_player)
+        self.register_button.pack()
 
-        self.label_game_options = tk.Label(self.root, text="Select the game you want to play:")
-        self.label_game_options.pack()
+        self.game_options = ["Bullseye Measurement", "501", "301", "Cricket"]
+        self.game_var = tk.StringVar(self.root)
+        self.game_var.set(self.game_options[0])
+        self.game_dropdown = tk.OptionMenu(self.root, self.game_var, *self.game_options)
+        self.game_dropdown.pack()
 
-        self.var_game_option = tk.StringVar(self.root)
-        self.var_game_option.set("Bullseye Measurement")
-        self.game_options = {"Bullseye Measurement": self.bullseye_measurement, "501": self.game_501, "301": self.game_301, "Cricket": self.game_cricket}
-        self.dropdown_game_option = tk.OptionMenu(self.root, self.var_game_option, *self.game_options.keys())
-        self.dropdown_game_option.pack()
-
-        self.progress_bar = ttk.Progressbar(self.root, orient="horizontal", length=200, mode="indeterminate")
-        self.progress_bar.pack()
-        self.message_label = tk.Label(self.root, text="Waiting for user input...")
-        self.message_label.pack()
-
-        self.button_start_game = tk.Button(self.root, text="Start Game", command=self.start_game)
-        self.button_start_game.pack()
+        self.start_button = tk.Button(self.root, text="Start Game", command=self.start_game)
+        self.start_button.pack()
 
         self.microphone_button = tk.Button(self.root, text="Microphone: OFF", command=self.toggle_microphone, bg="red")
         self.microphone_button.pack()
+
+        self.progress_bar = ttk.Progressbar(self.root, orient="horizontal", length=200, mode="indeterminate")
+        self.progress_bar.pack()
+
+        self.message_label = tk.Label(self.root, text="Waiting for user input...")
+        self.message_label.pack()
 
     def initialize_speech_recognition(self):
         self.recognizer = sr.Recognizer()
@@ -64,7 +61,7 @@ class DartGameApp:
             self.picture = file_path
 
     def register_player(self):
-        name = self.entry_name.get()
+        name = self.name_var.get()
         if name:
             self.player = Player(name, self.picture)
         else:
@@ -85,37 +82,24 @@ class DartGameApp:
             if not self.microphone_active:
                 self.message_label.config(text="Microphone is OFF. Click on the microphone button to turn it ON.")
             else:
-                if self.var_game_option.get() != "Bullseye Measurement":
-                    self.select_game()
-                else:
-                    self.message_label.config(text="Please say the distance to the bullseye in centimeters.")
-                    self.listen_and_process_speech()
-
-    def listen_and_process_speech(self):
-        with sr.Microphone() as source:
-            self.recognizer.adjust_for_ambient_noise(source)
-            try:
-                audio = self.recognizer.listen(source)
-                text = self.recognizer.recognize_google(audio)
-                distance = float(text)
-                if 0 <= distance <= 15.9:
-                    self.message_label.config(text=f"Congratulations, {self.player.name}! You have hit the bullseye!")
-                    self.root.after_cancel(self.update_timer)
-                else:
-                    self.message_label.config(text="Sorry, you missed the bullseye. Please try again.")
-            except sr.UnknownValueError:
-                self.message_label.config(text="Sorry, I could not understand you. Please try again.")
-            except sr.RequestError as e:
-                self.message_label.config(text=f"Could not request results; {e}")
+                self.select_game()
 
     def select_game(self):
-        game_option = self.var_game_option.get()
-        self.game_options[game_option]()
+        game_option = self.game_var.get()
+        if game_option == "Bullseye Measurement":
+            self.bullseye_measurement()
+        elif game_option == "501":
+            self.game_501()
+        elif game_option == "301":
+            self.game_301()
+        elif game_option == "Cricket":
+            self.game_cricket()
 
     def bullseye_measurement(self):
         self.player.score = 0
         self.progress_bar.start()
         self.message_label.config(text="Please say the distance to the bullseye in centimeters.")
+        self.listen_and_process_speech()
 
     def game_501(self):
         self.player.score = 501
@@ -141,7 +125,9 @@ class DartGameApp:
             self.microphone_active = True
             self.microphone_button.config(text="Microphone: ON", bg="green")
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = DartGameApp(root)
-    root.mainloop()
+    def listen_and_process_speech(self):
+        with sr.Microphone() as source:
+            self.recognizer.adjust_for_ambient_noise(source)
+            try:
+                audio = self.recognizer.listen(source)
+                text
