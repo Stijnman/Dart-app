@@ -20,22 +20,28 @@ def crop_image(image):
         st.image(cropped_image, use_column_width=True)
         st.download_button(label="Download cropped image", data=cropped_image, file_name="cropped_image.png")
 
-def announce_next_player(player):
-    play_sound(f"{player['name']}'s turn.")
-
 def register_player():
     name = st.text_input("Enter your name (optional):")
     image_file = st.file_uploader("Upload a profile picture:", type=['jpg', 'jpeg', 'png'])
     submitted = st.form_submit_button("Register")
 
     if submitted:
-        player = {
-            'name': name if name else "Anonymous Player",
-            'image': Image.open(image_file) if image_file else None,
-            'active': True,
-            'score': 0,
-        }
-        return player
+        if not name:
+            name = "Anonymous Player"
+
+        if image_file:
+            try:
+                image = Image.open(image_file)
+            except Exception as e:
+                st.error(f"Error: {e}")
+                return None
+        else:
+            image = None
+
+        return {'name': name, 'image': image, 'active': True, 'score': 0}
+
+def announce_next_player(player):
+    play_sound(f"{player['name']}'s turn.")
 
 def main():
     st.title("Dart Game")
@@ -64,7 +70,9 @@ def main():
                         play_sound(f"{player['name']} scored {points} points.")
 
                         if player['image']:
-                            crop_image(player['image'])
+                            cropped_image = crop_image(player['image'])
+                            if cropped_image is not None:
+                                player['image'] = cropped_image
 
                         st.write(f"{player['name']}'s score: {player['score']}")
 
