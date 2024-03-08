@@ -7,35 +7,3 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 
-app = Flask(__name__)
-app.config.from_object(Config)
-
-# Load environment variables from .env file
-python_dotenv.load_dotenv()
-
-# Initialize Flask-Mail
-mail = Mail(app)
-
-# Example of sending an email
-def send_email(to, subject, template, **kwargs):
-    msg = Message(subject, recipients=[to])
-    msg.body = render_template(template + '.txt', **kwargs)
-    msg.html = render_template(template + '.html', **kwargs)
-    try:
-        mail.send(msg)
-    except Exception as e:
-        print(f"Error sending email: {e}")
-
-# Example of creating a PDF using reportlab
-def create_pdf(data):
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
-    elements = []
-    table = Table(data)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 14),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12
