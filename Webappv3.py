@@ -23,65 +23,78 @@ def crop_image(image):
 def announce_next_player(player):
     play_sound(f"{player['name']}'s turn.")
 
+def register_player():
+    name = st.text_input("Enter your name (optional):")
+    image_file = st.file_uploader("Upload a profile picture:", type=['jpg', 'jpeg', 'png'])
+    submitted = st.form_submit_button("Register")
+
+    if submitted:
+        player = {
+            'name': name if name else "Anonymous Player",
+            'image': Image.open(image_file) if image_file else None,
+            'active': True,
+            'score': 0,
+        }
+        return player
+
 def main():
     st.title("Dart Game")
     players = []
 
-    with st.form("Player Registration"):
-        name = st.text_input("Enter your name (optional):")
-        image_file = st.file_uploader("Upload a profile picture:", type=['jpg', 'jpeg', 'png'])
-        submitted = st.form_submit_button("Register")
+    while True:
+        cols = st.beta_columns(2)
+        player_form = cols[0].form_container()
+        game_controls = cols[1].form_container()
 
-        if submitted:
-            player = {
-                'name': name if name else "Anonymous Player",
-                'image': Image.open(image_file) if image_file else None,
-                'active': True,
-            }
-            players.append(player)
-            st.success(f"Player {player['name']} registered!")
+        with player_form:
+            player = register_player()
+            if player:
+                players.append(player)
 
-    active_players = [player for player in players if player['active']]
-    if len(active_players) > 0:
-        current_player = active_players[0]
-        announce_next_player(current_player)
+        active_players = [player for player in players if player['active']]
+        game_controls.write(f"Active Players: {len(active_players)}")
 
-        for player in active_players:
-            if player['active']:
-                st.write(f"{player['name']}'s turn:")
-                points = st.number_input("Enter points scored (0-50):", min_value=0, max_value=50)
-                if points:
-                    player['score'] = points
-                    play_sound(f"{player['name']} scored {points} points.")
+        if len(active_players) > 1:
+            current_player = active_players[0]
+            announce_next_player(current_player)
 
-                    if player['image']:
-                        crop_image(player['image'])
+            for player in active_players:
+                if player['active']:
+                    st.write(f"{player['name']}'s turn:")
+                    points = game_controls.number_input("Enter points scored (0-50):", min_value=0, max_value=50)
+                    if points:
+                        player['score'] = points
+                        play_sound(f"{player['name']} scored {points} points.")
 
-                    st.write(f"{player['name']}'s score: {player['score']}")
+                        if player['image']:
+                            crop_image(player['image'])
 
-                    # Deactivate the current player and activate the next player
-                    player['active'] = False
-                    next_player = active_players[(active_players.index(player) + 1) % len(active_players)]
-                    next_player['active'] = True
-                    announce_next_player(next_player)
+                        st.write(f"{player['name']}'s score: {player['score']}")
+
+                        # Deactivate the current player and activate the next player
+                        player['active'] = False
+                        next_player = active_players[(active_players.index(player) + 1) % len(active_players)]
+                        next_player['active'] = True
+                        announce_next_player(next_player)
+
+                    else:
+                        st.write(f"{player['name']}'s turn is over.")
 
                 else:
                     st.write(f"{player['name']}'s turn is over.")
 
-            else:
-                st.write(f"{player['name']}'s turn is over.")
+            if game_controls.button("Start Game"):
+                for player in players:
+                    player['active'] = False
+                    play_sound(f"{player['name']}'s turn is over.")
 
-    if st.button("Start Game"):
-        active_players = [player for player in players if player['active']]
-        if len(active_players) > 1:
-            for player in active_players:
-                player['active'] = False
-                play_sound(f"{player['name']}'s turn is over.")
+                st.write("Game started.")
 
-            st.write("Game started.")
+            if game_controls.button("Text-to-Speech"):
+                text_to_speech("Game over! Thank you for playing.")
 
-    if st.button("Text-to-Speech"):
-        text_to_speech("Game over! Thank you for playing.")
+            if game_controls.button("End Game"):
+                break
 
 if __name__ == "__main__":
     main()
