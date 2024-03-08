@@ -6,3 +6,41 @@ reportlab
 flask-socketio
 mailjet-rest
 eventlet
+
+
+from flask import Flask, render_template
+from flask_mail import Mail
+from config import Config
+import python-dotenv
+import reportlab
+
+app = Flask(__name__)
+app.config.from_object(Config)
+
+# Load environment variables from .env file
+python_dotenv.load_dotenv()
+
+# Initialize Flask-Mail
+mail = Mail(app)
+
+# Example of sending an email
+def send_email(to, subject, template, **kwargs):
+    msg = Message(subject, recipients=[to])
+    msg.body = render_template(template + '.txt', **kwargs)
+    msg.html = render_template(template + '.html', **kwargs)
+    mail.send(msg)
+
+# Example of creating a PDF using reportlab
+def create_pdf(data):
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer)
+    elements = []
+    table = Table(data)
+    elements.append(table)
+    doc.build(elements)
+    pdf = buffer.getvalue()
+    buffer.close()
+    return pdf
+
+if __name__ == '__main__':
+    app.run()
