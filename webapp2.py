@@ -3,6 +3,7 @@ import os
 from PIL import Image
 from gtts import gTTS
 import io
+import base64
 
 def play_sound(text):
     tts = gTTS(text=text, lang='en')
@@ -18,7 +19,10 @@ def crop_image(image):
     if cropped_image is not None:
         st.write("Cropped image:")
         st.image(cropped_image, use_column_width=True)
-        st.download_button(label="Download cropped image", data=cropped_image, file_name="cropped_image.png")
+        img_bytes = cropped_image.tobytes()
+        img_b64 = base64.b64encode(img_bytes).decode()
+        download_link = f'<a href="data:image/png;base64,{img_b64}" download="cropped_image.png">Download cropped image</a>'
+        st.markdown(download_link, unsafe_allow_html=True)
 
 def main():
     st.title("Dart Game")
@@ -34,6 +38,7 @@ def main():
                 'name': name if name else "Anonymous Player",
                 'image': Image.open(image_file) if image_file else None,
                 'active': True,
+                'score': 0
             }
             players.append(player)
             st.success(f"Player {player['name']} registered!")
