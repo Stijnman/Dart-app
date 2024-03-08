@@ -1,19 +1,29 @@
 import tkinter as tk
-from tkinter import ttk
-from tkinter import filedialog
+from tkinter import ttk, filedialog
 import os
 import speech_recognition as sr
-from tkinter import messagebox
 
 class Player:
     def __init__(self, name, picture, anonymous=False):
+        """
+        Initialize a new Player instance with a name, picture, and an anonymous flag.
+
+        :param name: The name of the player.
+        :param picture: The file path of the player's picture.
+        :param anonymous: A boolean indicating if the player is anonymous.
+        """
         self.name = name
         self.picture = picture
-        self.score = 501
+        self.score = 501  # Default score for dart games
         self.anonymous = anonymous
 
 class DartGameApp:
     def __init__(self, root):
+        """
+        Initialize a new DartGameApp instance with a root tkinter window.
+
+        :param root: The root tkinter window for the application.
+        """
         self.root = root
         self.root.title("Dart Game")
         self.player = None
@@ -23,6 +33,9 @@ class DartGameApp:
         self.initialize_speech_recognition()
 
     def initialize_ui(self):
+        """
+        Initialize and layout the user interface components.
+        """
         self.name_var = tk.StringVar()
         self.name_entry = tk.Entry(self.root, textvariable=self.name_var)
         self.name_entry.pack()
@@ -55,15 +68,24 @@ class DartGameApp:
         self.result_label.pack()
 
     def initialize_speech_recognition(self):
+        """
+        Initialize the speech recognition system.
+        """
         self.recognizer = sr.Recognizer()
         self.update_timer = self.root.after(5000, self.update_progress_and_message)
 
     def browse_picture(self):
+        """
+        Open a file dialog to let the user select a picture.
+        """
         file_path = filedialog.askopenfilename()
         if file_path:
             self.picture = file_path
 
     def register_player(self):
+        """
+        Register a new player with the given name and picture.
+        """
         name = self.name_var.get()
         if name:
             self.player = Player(name, self.picture)
@@ -73,6 +95,9 @@ class DartGameApp:
         self.message_label.config(text=f"Player {self.player.name} registered!")
 
     def start_game(self):
+        """
+        Start the game with the selected game mode.
+        """
         if not self.player:
             messagebox.showerror("Error", "Please register or start the game anonymously.")
             return
@@ -81,6 +106,9 @@ class DartGameApp:
         self.select_game()
 
     def update_progress_and_message(self):
+        """
+        Update the progress bar and message label.
+        """
         if self.player:
             if not self.microphone_active:
                 self.message_label.config(text="Microphone is OFF. Click on the microphone button to turn it ON.")
@@ -88,6 +116,9 @@ class DartGameApp:
                 self.select_game()
 
     def select_game(self):
+        """
+        Select and start the game based on the selected game mode.
+        """
         game_option = self.game_var.get()
         if game_option == "Bullseye Measurement":
             self.bullseye_measurement()
@@ -99,35 +130,18 @@ class DartGameApp:
             self.game_cricket()
 
     def bullseye_measurement(self):
+        """
+        Start the bullseye measurement game.
+        """
         self.player.score = 0
         self.progress_bar.start()
         self.message_label.config(text="Please say the distance to the bullseye in centimeters.")
         self.listen_and_process_speech()
 
     def game_501(self):
+        """
+        Start the 501 game.
+        """
         self.player.score = 501
         self.progress_bar.start()
-        self.message_label.config(text="Please say the score of each dart, separated by commas.")
-        self.listen_and_process_speech()
-
-    def game_301(self):
-        self.player.score = 301
-        self.progress_bar.start()
-        self.message_label.config(text="Please say the score of each dart, separated by commas.")
-        self.listen_and_process_speech()
-
-    def game_cricket(self):
-        # Implement the logic for the cricket game
-        pass
-
-    def toggle_microphone(self):
-        if self.microphone_active:
-            self.microphone_active = False
-            self.microphone_button.config(text="Microphone: OFF", bg="red")
-        else:
-            self.microphone_active = True
-            self.microphone_button.config(text="Microphone: ON", bg="green")
-
-    def listen_and_process_speech(self):
-        with sr.Microphone() as source:
-            self.recognizer
+        self.message_label.config(text="
