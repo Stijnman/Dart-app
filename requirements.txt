@@ -1,18 +1,11 @@
-streamlit
-flask
-flask-mail
-python-dotenv
-reportlab
-flask-socketio
-mailjet-rest
-eventlet
-
-
+import os
 from flask import Flask, render_template
-from flask_mail import Mail
+from flask_mail import Mail, Message
 from config import Config
-import python-dotenv
-import reportlab
+import python_dotenv
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -28,19 +21,21 @@ def send_email(to, subject, template, **kwargs):
     msg = Message(subject, recipients=[to])
     msg.body = render_template(template + '.txt', **kwargs)
     msg.html = render_template(template + '.html', **kwargs)
-    mail.send(msg)
+    try:
+        mail.send(msg)
+    except Exception as e:
+        print(f"Error sending email: {e}")
 
 # Example of creating a PDF using reportlab
 def create_pdf(data):
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer)
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
     elements = []
     table = Table(data)
-    elements.append(table)
-    doc.build(elements)
-    pdf = buffer.getvalue()
-    buffer.close()
-    return pdf
-
-if __name__ == '__main__':
-    app.run()
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 14),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12
