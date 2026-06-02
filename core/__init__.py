@@ -2,7 +2,7 @@
 Dart Game Pro v2.2 — Core package with 189 features
 """
 
-__version__ = "2.2.0"
+__version__ = "2.3.0"
 
 from .engine import DartGameEngine
 from .player import Player

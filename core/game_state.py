@@ -120,6 +120,9 @@ class GameState:
     bot_difficulty: int = 5
     bot_player_idx: int = -1
     
+    # Sub-engine for standalone game modes
+    sub_engine: Any = None
+    
     def current_player(self):
         if not self.players:
             return None
