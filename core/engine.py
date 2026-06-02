@@ -13,6 +13,7 @@ from .constants import (
     KILLER_CONFIG, AROUND_THE_CLOCK_CONFIG
 )
 from .dartbot import DartBot
+from .extensions import BounceOutTracker
 
 
 class DartGameEngine:
@@ -29,6 +30,7 @@ class DartGameEngine:
         bot_enabled: bool = False,
         bot_difficulty: int = 5,
         variant: str = "standard",
+        starting_score: int = None,
     ):
         self.state = GameState()
         self.state.mode = mode.lower()
@@ -55,6 +57,13 @@ class DartGameEngine:
                 self.state.bot_player_idx = len(self.state.players) - 1
         else:
             self.dartbot = None
+        self.bounce_tracker = BounceOutTracker()
+        
+        # Override starting score if provided (custom starting score feature)
+        if starting_score is not None and self.state.mode in ["x01", "101", "170", "201", "210", "301", "501", "701", "901", "1001", "1501"]:
+            self.state.starting_score = starting_score
+            for p in self.state.players:
+                p.score = starting_score - self.state.handicaps.get(p.name, 0)
         
         # Initialize game-specific state
         if self.state.mode in ["cricket", "cut_throat", "no_score_cricket"]:
@@ -728,6 +737,10 @@ class DartGameEngine:
             return []
         
         return get_checkout(score)
+    
+    def record_bounce_out(self, player_name: str, dart_num: int = 1):
+        """Record a bounce-out (dart hit board but fell out). Score = 0 but doesn't count as a miss."""
+        self.bounce_tracker.record_bounce_out(player_name, dart_num)
     
     def get_match_summary(self) -> dict:
         """Get comprehensive match summary."""
