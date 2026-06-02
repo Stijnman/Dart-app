@@ -1,20 +1,19 @@
 """
-Dart Game Pro v2.0 — Entry Point
+Dart Game Pro v2.2 — Entry Point
 
-Launch the Streamlit app:
-    streamlit run main.py
-
-Run tests:
-    pytest tests/ -v
+Launch: streamlit run main.py
 """
 
-import sys
-import os
-
-# Add project root to path
+import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from core import init_db, init_db_v2
 from ui.streamlit_app import main
 
 if __name__ == "__main__":
+    # Initialize databases
+    init_db()
+    init_db_v2()
+    
+    # Launch UI
     main()
