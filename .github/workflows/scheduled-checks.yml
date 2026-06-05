@@ -1,0 +1,38 @@
+name: Scheduled Maintenance Checks
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'   # Every Monday at 09:00 UTC
+  workflow_dispatch:     # Allow manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pip-audit safety
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    - name: Run pip-audit (vulnerability check)
+      run: |
+        pip-audit --requirement requirements.txt || true
+
+    - name: Check for outdated packages
+      run: |
+        pip list --outdated
+
+    - name: Run safety check
+      run: |
+        safety check --json || true
