@@ -4,12 +4,14 @@ All 30 game modes supported with proper scoreboards.
 """
 
 import streamlit as st
-import os, sys, random, io, json
+import os, sys, random, io, json, time
 from datetime import datetime
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.engine import DartGameEngine
+from core.audio_engine import AudioEngine, AudioConfig, Language
+from core.ui_enhancements import UIEnhancementEngine, SegmentState
 from core.player import Player
 from core.game_state import InOutRule, MatchFormat
 from core.checkout import get_checkout, get_best_checkout, is_checkable_score
@@ -75,9 +77,12 @@ def apply_theme():
 
 # ===== INIT =====
 init_db(); init_db_v2()
-defaults = {"game_started":False,"game":None,"voice":True,"entry":"per_dart","completed":False,
-    "theme":"Dark Pro","spectator":False,"tv":False,"achievements":{},"career":None,
-    "commentary":CommentaryEngine(),"lobby":LobbySystem(),"dgsl":DartsLiveFeatures("Player"),
+	defaults = {"game_started":False,"game":None,"voice":True,"entry":"per_dart","completed":False,
+	    "theme":"Dark Pro","spectator":False,"tv":False,"achievements":{},"career":None,
+	    "commentary":CommentaryEngine(),"lobby":LobbySystem(),"dgsl":DartsLiveFeatures("Player"),
+        "audio":AudioEngine(AudioConfig(language=Language.ENGLISH)),
+        "ui_engine":UIEnhancementEngine(),
+        "auto_advance":False,
     "theme_sys":ThemeSystem(),"pro_sim":None}
 for k,v in defaults.items():
     if k not in st.session_state: st.session_state[k] = v
@@ -291,9 +296,31 @@ def start_game(pdata, mode, fm, vs_bot, bot_lvl, variant, smartbot, coin_flip):
 def render_game(smartbot, use_vboard):
     engine = st.session_state.game
     state = engine.state
+    ui = st.session_state.ui_engine
     current = engine.get_current_player()
     if not current: return
     
+    # CSS for Pulsating Glow and Blurring
+    st.markdown("""
+        <style>
+        @keyframes pulse {
+            0% { box-shadow: 0 0 10px rgba(0, 255, 0, 0.5); transform: scale(1); }
+            50% { box-shadow: 0 0 25px rgba(0, 255, 0, 1); transform: scale(1.05); }
+            100% { box-shadow: 0 0 10px rgba(0, 255, 0, 0.5); transform: scale(1); }
+        }
+        .optimal-target {
+            animation: pulse 1.5s infinite;
+            border: 3px solid #00ff00 !important;
+            background-color: rgba(0, 255, 0, 0.2) !important;
+        }
+        .disabled-target {
+            opacity: 0.3;
+            filter: blur(2px) grayscale(100%);
+            pointer-events: none;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
     is_bot = state.bot_enabled and state.bot_player_idx == state.current_player_idx
     
     # Commentary intro
