@@ -25,6 +25,7 @@ from core.extensions import (
     get_tv_scoreboard, generate_share_text, generate_stats_card,
     TournamentEngine,
 )
+from core.auto_scorer import WebcamAutoScorer, get_auto_score_integration_info
 from core.gamemodes import (
     CountUpGame, BermudaGame, JDCChallenge, Practice4160,
     TacticCricket, RandomCricket, HammerCricket,
@@ -138,8 +139,8 @@ def play_tab():
             mode = {"Killer":"killer","Half It":"half_it","Gotcha":"gotcha"}.get(mode,"killer")
             if mode == "killer": st.slider("Lives", 1, 9, 3)
         elif cat == "Specialty":
-            mode = st.selectbox("Game", ["Baseball","Team ATC","Eliminator","Roadrunner","Escalator 20"])
-            mode = {"Baseball":"baseball","Team ATC":"team_atc","Eliminator":"eliminator","Roadrunner":"roadrunner","Escalator 20":"escalator_20"}.get(mode,"baseball")
+            mode = st.selectbox("Game", ["Baseball","Team ATC","Eliminator","Roadrunner","Escalator 20","Chase the Dragon"])
+            mode = {"Baseball":"baseball","Team ATC":"team_atc","Eliminator":"eliminator","Roadrunner":"roadrunner","Escalator 20":"escalator_20","Chase the Dragon":"chase_the_dragon"}.get(mode,"baseball")
         else:  # Pro Career
             mode = st.selectbox("Mode", ["Play the Pro","Challenge Match"])
             mode = "play_pro" if "Pro" in mode else "challenge"
@@ -161,6 +162,7 @@ def play_tab():
         st.session_state.entry = st.radio("Input", ["per_dart","total_only","voice"], format_func=lambda x: {"per_dart":"Per Dart","total_only":"Total","voice":"🎤 Voice"}[x], horizontal=True)
         
         use_vboard = st.checkbox("🎯 Virtual Dartboard")
+        use_auto = st.checkbox("📷 Webcam Auto-Scorer (Beta)")
         
         # Load saved game
         saved = list_saved_games(st.session_state.get("last_player", "Player"))
@@ -211,6 +213,12 @@ def play_tab():
     
     # Active game
     if st.session_state.get("game_started") and st.session_state.game:
+        if use_auto:
+            st.sidebar.warning("📷 Auto-Scorer active. Ensure webcam is positioned correctly.")
+            info = get_auto_score_integration_info()
+            with st.sidebar.expander("Auto-Scorer Info"):
+                st.write(f"Status: {info['status']}")
+                st.write(f"Inspiration: {info['inspiration']}")
         render_game(use_smartbot, use_vboard)
     else:
         # Leaderboard

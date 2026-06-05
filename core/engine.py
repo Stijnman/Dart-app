@@ -21,6 +21,7 @@ from .gamemodes import (
     CountUpGame, BermudaGame, JDCChallenge, Practice4160,
     TacticCricket, RandomCricket, HammerCricket,
     EliminatorGame, RoadrunnerGame, Escalator20Game, CricketCountUp,
+    ChaseTheDragonGame,
 )
 from .extensions import (
     BaseballDarts, GotchaGame, TeamRoundTheClock,
@@ -49,6 +50,7 @@ class DartGameEngine:
     SUBENGINE_ELIMINATOR = ["eliminator"]
     SUBENGINE_ROADRUNNER = ["roadrunner"]
     SUBENGINE_ESCALATOR = ["escalator_20"]
+    SUBENGINE_CHASE_DRAGON = ["chase_the_dragon"]
 
     def __init__(
         self,
@@ -141,6 +143,8 @@ class DartGameEngine:
             self._init_subengine_roadrunner()
         elif m in self.SUBENGINE_ESCALATOR:
             self._init_subengine_escalator()
+        elif m in self.SUBENGINE_CHASE_DRAGON:
+            self._init_subengine_chase_dragon()
 
     # =========================================================================
     # NATIVE MODE INITIALIZERS
@@ -290,6 +294,10 @@ class DartGameEngine:
             pname = self.state.players[0].name
             self.state.sub_engine = Escalator20Game(pname)
 
+    def _init_subengine_chase_dragon(self):
+        pnames = [p.name for p in self.state.players]
+        self.state.sub_engine = ChaseTheDragonGame(pnames)
+
     # =========================================================================
     # CORE: Record a throw
     # =========================================================================
@@ -324,6 +332,8 @@ class DartGameEngine:
         elif self.state.mode == "half_it":
             msg = self._process_half_it_throw(player, dart_scores)
         elif self.state.sub_engine:
+            msg = self._process_subengine_throw(dart_scores)
+        elif self.state.mode in self.SUBENGINE_CHASE_DRAGON:
             msg = self._process_subengine_throw(dart_scores)
         else:
             msg = f"{player.name} scored {sum(dart_scores[:3])}"
@@ -851,6 +861,9 @@ class DartGameEngine:
                 elif hasattr(se, 'points') and p.name in se.points:
                     entry["score"] = se.points[p.name]
                     entry["display"] = f"{se.points[p.name]}pts"
+                elif isinstance(se, ChaseTheDragonGame):
+                    target_name, _ = se.get_current_target(p.name)
+                    entry["display"] = f"Target: {target_name}"
                 else:
                     entry["display"] = "Playing"
             else:
@@ -870,6 +883,19 @@ class DartGameEngine:
             tidx = self.state.half_it_current_target_idx
             if tidx < len(self.state.half_it_targets):
                 result["extra"]["target"] = self.state.half_it_targets[tidx]
+        elif self.state.sub_engine:
+            se = self.state.sub_engine
+            if hasattr(se, 'get_current_target'):
+                try:
+                    res = se.get_current_target()
+                    if isinstance(res, tuple): result["extra"]["target"] = res[0]
+                    else: result["extra"]["target"] = str(res)
+                except:
+                    try:
+                        res = se.get_current_target(self.state.players[self.state.current_player_idx].name)
+                        if isinstance(res, tuple): result["extra"]["target"] = res[0]
+                        else: result["extra"]["target"] = str(res)
+                    except: pass
         
         return result
 

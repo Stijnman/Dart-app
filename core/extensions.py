@@ -508,14 +508,32 @@ def generate_match_report(match_data: Dict) -> str:
 # ===== FEATURE 19: TV SCOREBOARD =====
 def get_tv_scoreboard(game_state) -> Dict:
     """Generate clean scoreboard data for external display."""
+    current_p = game_state.players[game_state.current_player_idx] if game_state.players else None
+    
+    # Extract current target for practice modes
+    target = ""
+    if game_state.sub_engine and hasattr(game_state.sub_engine, 'get_current_target'):
+        try:
+            res = game_state.sub_engine.get_current_target()
+            if isinstance(res, tuple): target = res[0]
+            else: target = str(res)
+        except:
+            try:
+                res = game_state.sub_engine.get_current_target(current_p.name)
+                if isinstance(res, tuple): target = res[0]
+                else: target = str(res)
+            except: pass
+
     return {
         "mode": game_state.mode.upper(),
         "turn": game_state.turn_number,
-        "current_player": game_state.players[game_state.current_player_idx].name if game_state.players else "",
+        "current_player": current_p.name if current_p else "",
+        "target": target,
         "players": [
             {
                 "name": p.name,
                 "score": p.score,
+                "display": str(p.score), # Base score display
                 "legs": game_state.legs_won.get(p.name, 0),
                 "sets": game_state.sets_won.get(p.name, 0),
                 "is_throwing": i == game_state.current_player_idx,

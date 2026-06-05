@@ -593,3 +593,63 @@ class CricketCountUp:
         elif dart <= 40 and dart % 2 == 0: return (dart // 2, 2)
         elif dart <= 60 and dart % 3 == 0: return (dart // 3, 3)
         return (0, 0)
+
+# ===== CHASE THE DRAGON =====
+class ChaseTheDragonGame:
+    """
+    Chase the Dragon: Hit treble segments from 10-20, then outer bull and bull in order.
+    Inspired by DartsScoreboard-NG.
+    """
+    
+    DRAGON_TARGETS = [
+        ("T10", 30), ("T11", 33), ("T12", 36), ("T13", 39), ("T14", 42),
+        ("T15", 45), ("T16", 48), ("T17", 51), ("T18", 54), ("T19", 57),
+        ("T20", 60), ("Outer Bull", 25), ("Bullseye", 50)
+    ]
+    
+    def __init__(self, players: List[str]):
+        self.players = players
+        self.current_target_idx = {p: 0 for p in players}
+        self.current_player_idx = 0
+        self.winner = None
+        self.history = []
+
+    def get_current_target(self, player: str):
+        idx = self.current_target_idx[player]
+        if idx < len(self.DRAGON_TARGETS):
+            return self.DRAGON_TARGETS[idx]
+        return None, None
+
+    def record_throw(self, darts: List[int]) -> str:
+        player = self.players[self.current_player_idx]
+        idx = self.current_target_idx[player]
+        
+        if idx >= len(self.DRAGON_TARGETS):
+            return f"{player}: Already slayed the dragon!"
+            
+        msgs = []
+        for dart in darts:
+            target_name, target_value = self.get_current_target(player)
+            if not target_name:
+                break
+                
+            if dart == target_value:
+                self.current_target_idx[player] += 1
+                msgs.append(f"🎯 HIT {target_name}!")
+                if self.current_target_idx[player] >= len(self.DRAGON_TARGETS):
+                    if not self.winner:
+                        self.winner = player
+                    msgs.append(f"🐉 DRAGON SLAYED! {player} wins!")
+                    break
+            else:
+                # No progress, but we keep looking for the same target with next darts
+                pass
+        
+        if not msgs:
+            target_name, _ = self.get_current_target(player)
+            msgs.append(f"❌ Missed {target_name}")
+            
+        # Advance player
+        self.current_player_idx = (self.current_player_idx + 1) % len(self.players)
+        
+        return " | ".join(msgs)
