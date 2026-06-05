@@ -98,8 +98,18 @@ def apply_theme():
 .stMetric {{ background: rgba(255,255,255,0.05); border-radius: 8px; padding: 8px; }}
 .stExpander {{ border: 1px solid #444; border-radius: 8px; }}
 [data-testid="stSidebar"] {{ background: rgba(0,0,0,0.2); }}
+
+/* v3.1 Mobile / PWA responsive (P0-3) */
+@media (max-width: 768px) {{
+    .stButton>button, .stTextInput>div>div>input {{ min-height: 44px; font-size: 16px; }}
+    .stMetric {{ font-size: 0.9em; }}
+    [data-testid="stSidebar"] {{ display: none; }} /* collapse on mobile, use top nav */
+}}
+.stAppViewContainer {{ padding-top: 0.5rem; }}
 </style>
 """, unsafe_allow_html=True)
+    # Mobile PWA hints
+    st.set_page_config(layout="wide", initial_sidebar_state="collapsed")  # better for mobile
 
 def start_new_game(mode: str, names: List[str], custom_mode: Optional[CustomGameMode] = None, **engine_kwargs):
     players = [Player(n) for n in names if n.strip()]
