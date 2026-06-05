@@ -135,12 +135,20 @@ def play_tab():
             elif mode == "shanghai": variant = st.selectbox("Length", ["Quick (7)", "Full (20)"], 0); variant = "quick" if "Quick" in variant else "full"
             elif mode in ["count_up","bermuda","jdc","41_60","cricket_count_up"]: pass
         elif cat == "Party":
-            mode = st.selectbox("Game", ["Killer","Half It","Gotcha"])
-            mode = {"Killer":"killer","Half It":"half_it","Gotcha":"gotcha"}.get(mode,"killer")
+            mode = st.selectbox("Game", ["Killer","Half It","Gotcha","Darts Golf","Tic-Tac-Toe","Shanghai Champ"])
+            mode = {
+                "Killer":"killer", "Half It":"halve_it", "Gotcha":"gotcha", 
+                "Darts Golf":"golf", "Tic-Tac-Toe":"tictactoe", "Shanghai Champ":"shanghai_champ"
+            }.get(mode,"killer")
             if mode == "killer": st.slider("Lives", 1, 9, 3)
         elif cat == "Specialty":
-            mode = st.selectbox("Game", ["Baseball","Team ATC","Eliminator","Roadrunner","Escalator 20","Chase the Dragon","Tactics Joker"])
-            mode = {"Baseball":"baseball","Team ATC":"team_atc","Eliminator":"eliminator","Roadrunner":"roadrunner","Escalator 20":"escalator_20","Chase the Dragon":"chase_the_dragon","Tactics Joker":"tactics_joker"}.get(mode,"baseball")
+            mode = st.selectbox("Game", ["Baseball","Team ATC","Eliminator","Roadrunner","Escalator 20","Chase the Dragon","Tactics Joker","Bob 27","Game 121"])
+            mode = {
+                "Baseball":"baseball","Team ATC":"team_atc","Eliminator":"eliminator",
+                "Roadrunner":"roadrunner","Escalator 20":"escalator_20",
+                "Chase the Dragon":"chase_the_dragon","Tactics Joker":"tactics_joker",
+                "Bob 27":"bob27", "Game 121":"game121"
+            }.get(mode,"baseball")
             if mode == "tactics_joker":
                 st.write("**Joker Numbers** (comma-separated, e.g., 1,5,10,20):")
                 joker_input = st.text_input("Jokers", "1,5,10,20", key="joker_input")

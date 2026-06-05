@@ -24,6 +24,8 @@ from .gamemodes import (
     ChaseTheDragonGame,
 )
 from .tactics_joker import TacticsJokerGame, TacticsJokerBuilder, PRESET_CLASSIC
+from .party_games import KillerGame, DartsGolf, TicTacToeDarts, ShanghaiChampionship
+from .practice_drills import Bob27, Game121, HalveIt
 from .extensions import (
     BaseballDarts, GotchaGame, TeamRoundTheClock,
 )
@@ -53,6 +55,13 @@ class DartGameEngine:
     SUBENGINE_ESCALATOR = ["escalator_20"]
     SUBENGINE_CHASE_DRAGON = ["chase_the_dragon"]
     SUBENGINE_TACTICS_JOKER = ["tactics_joker"]
+    SUBENGINE_KILLER = ["killer"]
+    SUBENGINE_GOLF = ["golf"]
+    SUBENGINE_TICTACTOE = ["tictactoe"]
+    SUBENGINE_SHANGHAI = ["shanghai_champ"]
+    SUBENGINE_BOB27 = ["bob27"]
+    SUBENGINE_121 = ["game121"]
+    SUBENGINE_HALVEIT = ["halve_it"]
 
     def __init__(
         self,
@@ -149,6 +158,20 @@ class DartGameEngine:
             self._init_subengine_chase_dragon()
         elif m in self.SUBENGINE_TACTICS_JOKER:
             self._init_subengine_tactics_joker()
+        elif m in self.SUBENGINE_KILLER:
+            self._init_subengine_killer()
+        elif m in self.SUBENGINE_GOLF:
+            self._init_subengine_golf()
+        elif m in self.SUBENGINE_TICTACTOE:
+            self._init_subengine_tictactoe()
+        elif m in self.SUBENGINE_SHANGHAI:
+            self._init_subengine_shanghai()
+        elif m in self.SUBENGINE_BOB27:
+            self._init_subengine_bob27()
+        elif m in self.SUBENGINE_121:
+            self._init_subengine_121()
+        elif m in self.SUBENGINE_HALVEIT:
+            self._init_subengine_halveit()
 
     # =========================================================================
     # NATIVE MODE INITIALIZERS
@@ -318,6 +341,35 @@ class DartGameEngine:
                 config = PRESET_CLASSIC
         
         self.state.sub_engine = TacticsJokerGame(pnames, config)
+
+    def _init_subengine_killer(self):
+        pnames = [p.name for p in self.state.players]
+        self.state.sub_engine = KillerGame(pnames)
+
+    def _init_subengine_golf(self):
+        pnames = [p.name for p in self.state.players]
+        self.state.sub_engine = DartsGolf(pnames)
+
+    def _init_subengine_tictactoe(self):
+        pnames = [p.name for p in self.state.players]
+        if len(pnames) >= 2:
+            self.state.sub_engine = TicTacToeDarts(pnames[0], pnames[1])
+
+    def _init_subengine_shanghai(self):
+        pnames = [p.name for p in self.state.players]
+        self.state.sub_engine = ShanghaiChampionship(pnames)
+
+    def _init_subengine_bob27(self):
+        pname = self.state.players[0].name if self.state.players else "Player"
+        self.state.sub_engine = Bob27(pname)
+
+    def _init_subengine_121(self):
+        pname = self.state.players[0].name if self.state.players else "Player"
+        self.state.sub_engine = Game121(pname)
+
+    def _init_subengine_halveit(self):
+        pnames = [p.name for p in self.state.players]
+        self.state.sub_engine = HalveIt(pnames)
 
     # =========================================================================
     # CORE: Record a throw
