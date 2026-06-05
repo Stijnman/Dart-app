@@ -12,7 +12,7 @@ It demonstrates:
 - Coaching Mode
 - Ladder League System
 
-Run with: python docs/v2.4_feature_demo.py
+Run with: python docs/v24_feature_demo.py
 """
 
 import sys

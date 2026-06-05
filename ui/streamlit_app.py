@@ -32,7 +32,7 @@ except ImportError:
             self.remaining = 501
 
 # Import the polished v2.4 tab
-from ui.v2.4_polished_tab import show_v24_polished_tab, initialize_v24_state
+from ui.v24_polished_tab import show_v24_polished_tab, initialize_v24_state
 
 
 def initialize_session_state():

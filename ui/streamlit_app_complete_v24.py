@@ -53,7 +53,7 @@ from core.coaching_mode import CoachingMode
 from core.ladder_league import LadderLeagueSystem, Tier
 
 # Import the polished tab
-from ui.v2.4_polished_tab import show_v24_polished_tab, initialize_v24_state
+from ui.v24_polished_tab import show_v24_polished_tab, initialize_v24_state
 
 
 def initialize_complete_session_state():

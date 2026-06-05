@@ -29,21 +29,23 @@ def main():
         print("✅ Databases ready!")
         print("Starting Streamlit app...")
 
-        # Import and run the Streamlit app directly
-        # This avoids the subprocess fragility of v2.3
-        import streamlit.web.bootstrap as bootstrap
-        from streamlit.web.bootstrap import run
-
+        # Import and run the Streamlit app directly via CLI entry
+        # (stable across Streamlit versions; avoids private bootstrap API changes)
         streamlit_app_path = str(PROJECT_ROOT / "ui" / "streamlit_app.py")
 
-        # Run Streamlit
-        sys.argv = ["streamlit", "run", streamlit_app_path, "--server.headless", "true"]
-        bootstrap.run(
-            main_script_path=streamlit_app_path,
-            command_line="",
-            args=[],
-            flag_options={},
-        )
+        # Set argv so streamlit CLI picks up our flags (headless for servers, etc.)
+        sys.argv = [
+            "streamlit",
+            "run",
+            streamlit_app_path,
+            "--server.headless",
+            "true",
+            "--browser.gatherUsageStats",
+            "false",
+        ]
+        import streamlit.web.cli as stcli
+
+        sys.exit(stcli.main())
 
     except ImportError as e:
         print(f"❌ Import error: {e}")

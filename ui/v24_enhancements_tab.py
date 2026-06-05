@@ -7,7 +7,7 @@ How to use:
 2. In your main `streamlit_app.py`, add this tab:
 
 ```python
-from ui.v2.4_enhancements_tab import show_v24_enhancements_tab
+from ui.v24_enhancements_tab import show_v24_enhancements_tab
 
 # In your tab selector
 if selected_tab == "v2.4 Features":

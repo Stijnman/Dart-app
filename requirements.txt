@@ -4,3 +4,9 @@ pandas>=2.0.0
 plotly>=5.15.0
 pillow>=10.0.0
 python-dateutil>=2.8.2
+matplotlib>=3.7.0
+scipy>=1.10.0
+pyttsx3>=2.90
+# Optional for full voice (mic): SpeechRecognition pyaudio  (platform specific)
+# For tests: pytest
+
