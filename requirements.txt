@@ -18,4 +18,6 @@ requests>=2.31.0
 # Optional for full voice (mic): SpeechRecognition pyaudio  (platform specific)
 # For tests: pytest
 # For deployment: gunicorn, docker
+# v3.2+ telemetry (for feature/database-telemetry)
+sqlalchemy>=2.0.0
 
