@@ -23,6 +23,7 @@ from .gamemodes import (
     EliminatorGame, RoadrunnerGame, Escalator20Game, CricketCountUp,
     ChaseTheDragonGame,
 )
+from .tactics_joker import TacticsJokerGame, TacticsJokerBuilder, PRESET_CLASSIC
 from .extensions import (
     BaseballDarts, GotchaGame, TeamRoundTheClock,
 )
@@ -51,6 +52,7 @@ class DartGameEngine:
     SUBENGINE_ROADRUNNER = ["roadrunner"]
     SUBENGINE_ESCALATOR = ["escalator_20"]
     SUBENGINE_CHASE_DRAGON = ["chase_the_dragon"]
+    SUBENGINE_TACTICS_JOKER = ["tactics_joker"]
 
     def __init__(
         self,
@@ -145,6 +147,8 @@ class DartGameEngine:
             self._init_subengine_escalator()
         elif m in self.SUBENGINE_CHASE_DRAGON:
             self._init_subengine_chase_dragon()
+        elif m in self.SUBENGINE_TACTICS_JOKER:
+            self._init_subengine_tactics_joker()
 
     # =========================================================================
     # NATIVE MODE INITIALIZERS
@@ -297,6 +301,23 @@ class DartGameEngine:
     def _init_subengine_chase_dragon(self):
         pnames = [p.name for p in self.state.players]
         self.state.sub_engine = ChaseTheDragonGame(pnames)
+
+    def _init_subengine_tactics_joker(self):
+        pnames = [p.name for p in self.state.players]
+        # Use variant to pass joker config (e.g., "1,5,10,20" or "classic")
+        if self.state.variant == "classic":
+            config = PRESET_CLASSIC
+        else:
+            # Parse joker numbers from variant string
+            try:
+                joker_nums = [int(x.strip()) for x in self.state.variant.split(",")]
+                builder = TacticsJokerBuilder()
+                builder.add_jokers(joker_nums)
+                config = builder.build()
+            except:
+                config = PRESET_CLASSIC
+        
+        self.state.sub_engine = TacticsJokerGame(pnames, config)
 
     # =========================================================================
     # CORE: Record a throw

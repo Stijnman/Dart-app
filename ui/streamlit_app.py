@@ -139,8 +139,13 @@ def play_tab():
             mode = {"Killer":"killer","Half It":"half_it","Gotcha":"gotcha"}.get(mode,"killer")
             if mode == "killer": st.slider("Lives", 1, 9, 3)
         elif cat == "Specialty":
-            mode = st.selectbox("Game", ["Baseball","Team ATC","Eliminator","Roadrunner","Escalator 20","Chase the Dragon"])
-            mode = {"Baseball":"baseball","Team ATC":"team_atc","Eliminator":"eliminator","Roadrunner":"roadrunner","Escalator 20":"escalator_20","Chase the Dragon":"chase_the_dragon"}.get(mode,"baseball")
+            mode = st.selectbox("Game", ["Baseball","Team ATC","Eliminator","Roadrunner","Escalator 20","Chase the Dragon","Tactics Joker"])
+            mode = {"Baseball":"baseball","Team ATC":"team_atc","Eliminator":"eliminator","Roadrunner":"roadrunner","Escalator 20":"escalator_20","Chase the Dragon":"chase_the_dragon","Tactics Joker":"tactics_joker"}.get(mode,"baseball")
+            if mode == "tactics_joker":
+                st.write("**Joker Numbers** (comma-separated, e.g., 1,5,10,20):")
+                joker_input = st.text_input("Jokers", "1,5,10,20", key="joker_input")
+                # Store in variant for engine
+                variant = joker_input
         else:  # Pro Career
             mode = st.selectbox("Mode", ["Play the Pro","Challenge Match"])
             mode = "play_pro" if "Pro" in mode else "challenge"
