@@ -809,7 +809,19 @@ def show_analytics_page():
 
 def show_career_page():
     st.header("Career Mode")
-    st.info("Tournaments, ELO, challenges, ladder — full in v3.0 Advanced + DB persistence (work in progress).")
+    st.info("Tournaments, ELO, challenges, ladder — v3.1 foundation (core/tournament.py + ELO in multiplayer).")
+    try:
+        from core.tournament import TournamentBracket
+        if st.button("Demo Single-Elim Bracket (4 players)"):
+            tb = TournamentBracket(id="demo", players=["You","P2","P3","P4"])
+            tb.build_seeded()
+            fig = tb.to_plotly_tree()
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+            st.json([{"id":m.id,"p1":m.p1,"p2":m.p2,"round":m.round} for m in tb.matches])
+            st.caption("Auto-advance on WS match end + live updates coming in next iteration.")
+    except Exception as e:
+        st.caption(f"Tournament stub: {e}")
 
 def show_settings_page():
     st.header("Settings")
