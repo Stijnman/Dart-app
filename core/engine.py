@@ -32,6 +32,14 @@ from .gamemodes import (
     EliminatorGame, RoadrunnerGame, Escalator20Game, CricketCountUp,
     ChaseTheDragonGame,
 )
+from .party_games import (
+    KillerGame, DartsGolf, TicTacToeDarts, ShanghaiChampionship,
+)
+from .practice_drills import Bob27, Game121, HalveIt
+from .tactics_joker import (
+    TacticsJokerGame, TacticsJokerConfig, TacticsJokerBuilder, PRESET_CLASSIC,
+)
+from .extensions import BaseballDarts, GotchaGame, TeamRoundTheClock
 from .achievements import AchievementEngine
 
 
@@ -367,8 +375,12 @@ class DartGameEngine:
 
     def _init_subengine_countup(self):
         pnames = [p.name for p in self.state.players]
-        rounds = 8 if self.state.mode == "count_up" else 8
-        self.state.sub_engine = CountUpGame(pnames, rounds)
+        rounds = 8
+        if self.state.mode == "count_up":
+            self.state.sub_engine = CountUpGame(pnames, rounds=rounds)
+        else:
+            # cricket_count_up variant
+            self.state.sub_engine = CricketCountUp(pnames, rounds=rounds)
 
     def _init_subengine_bermuda(self):
         pnames = [p.name for p in self.state.players]
@@ -395,24 +407,30 @@ class DartGameEngine:
         self.state.sub_engine = HammerCricket(pnames)
 
     def _init_subengine_baseball(self):
-        # Baseball is a simple X01 variant with innings
         pnames = [p.name for p in self.state.players]
-        # For now, use CountUp as a sub-engine for baseball scoring
-        self.state.sub_engine = CountUpGame(pnames, rounds=9)
+        self.state.sub_engine = BaseballDarts(pnames)
 
     def _init_subengine_gotcha(self):
         pnames = [p.name for p in self.state.players]
         lives = 3
+        target = 301
         if self.state.variant == "easy":
             lives = 5
         elif self.state.variant == "hard":
             lives = 1
-        self.state.sub_engine = CountUpGame(pnames, rounds=10)  # Simplified
+        self.state.sub_engine = GotchaGame(pnames, lives=lives, target_score=target)
 
     def _init_subengine_team_atc(self):
-        pnames = [p.name for p in self.state.players]
-        # Team ATC: players alternate, team score is combined
-        self.state.sub_engine = CountUpGame(pnames, rounds=5)
+        # TeamRoundTheClock expects List[Dict] teams e.g. [{"name": "TeamA", "players": ["A1","A2"]}]
+        if len(self.state.players) >= 2:
+            teams = [
+                {"name": "TeamA", "players": [self.state.players[0].name]},
+                {"name": "TeamB", "players": [self.state.players[1].name]},
+            ]
+            self.state.sub_engine = TeamRoundTheClock(teams)
+        else:
+            pnames = [p.name for p in self.state.players]
+            self.state.sub_engine = TeamRoundTheClock([{"name": "Team", "players": pnames}])
 
     def _init_subengine_eliminator(self):
         pnames = [p.name for p in self.state.players]
@@ -435,37 +453,60 @@ class DartGameEngine:
         self.state.sub_engine = ChaseTheDragonGame(pnames)
 
     def _init_subengine_tactics_joker(self):
-        # Tactics Joker requires a config - simplified for now
         pnames = [p.name for p in self.state.players]
-        self.state.sub_engine = CountUpGame(pnames, rounds=10)
+        cfg = PRESET_CLASSIC
+        if self.state.variant == "aggressive":
+            cfg = TacticsJokerConfig(joker_numbers=[20], joker_triple_value=25, bull_substitute_enabled=True)
+        elif self.state.variant == "balanced":
+            cfg = TacticsJokerConfig(joker_numbers=[10, 15, 20], joker_triple_value=25, bull_substitute_enabled=True)
+        self.state.sub_engine = TacticsJokerGame(pnames, config=cfg)
 
     def _init_subengine_killer_party(self):
         pnames = [p.name for p in self.state.players]
-        self.state.sub_engine = CountUpGame(pnames, rounds=10)
+        lives = 3
+        if self.state.variant == "soft":
+            lives = 3
+        elif self.state.variant == "hard":
+            lives = 1
+        elif self.state.variant == "sudden_death":
+            lives = 1
+        self.state.sub_engine = KillerGame(pnames, lives=lives, difficulty=self.state.variant or "normal")
 
     def _init_subengine_golf(self):
         pnames = [p.name for p in self.state.players]
-        self.state.sub_engine = CountUpGame(pnames, rounds=9)
+        holes = 9
+        if self.state.variant and self.state.variant.isdigit():
+            holes = int(self.state.variant)
+        self.state.sub_engine = DartsGolf(pnames, holes=holes)
 
     def _init_subengine_tictactoe(self):
         if len(self.state.players) >= 2:
-            self.state.sub_engine = CountUpGame([p.name for p in self.state.players[:2]], rounds=5)
+            p1 = self.state.players[0].name
+            p2 = self.state.players[1].name
+            self.state.sub_engine = TicTacToeDarts(p1, p2)
+        else:
+            p = self.state.players[0].name if self.state.players else "P1"
+            self.state.sub_engine = TicTacToeDarts(p, "P2")
 
     def _init_subengine_shanghai_champ(self):
         pnames = [p.name for p in self.state.players]
-        self.state.sub_engine = CountUpGame(pnames, rounds=7)
+        rounds = 7
+        if self.state.variant == "quick":
+            rounds = 7
+        self.state.sub_engine = ShanghaiChampionship(pnames, rounds=rounds)
 
     def _init_subengine_bob27(self):
         pname = self.state.players[0].name if self.state.players else "Player"
-        self.state.sub_engine = CountUpGame([pname], rounds=21)
+        self.state.sub_engine = Bob27(pname)
 
     def _init_subengine_121(self):
         pname = self.state.players[0].name if self.state.players else "Player"
-        self.state.sub_engine = CountUpGame([pname], rounds=10)
+        start = 121
+        self.state.sub_engine = Game121(pname, start_score=start)
 
     def _init_subengine_halveit(self):
         pnames = [p.name for p in self.state.players]
-        self.state.sub_engine = CountUpGame(pnames, rounds=7)
+        self.state.sub_engine = HalveIt(pnames)
 
     # =========================================================================
     # CORE: Record a throw
@@ -537,9 +578,28 @@ class DartGameEngine:
         )
         self.state.history.append(record)
 
-        # Advance turn unless game over
-        if not self.state.winner:
+        # Advance turn unless game over. For subs that manage their own player_idx internally,
+        # we already synced in _process_subengine_throw; avoid double-advance by checking.
+        se = self.state.sub_engine
+        sub_manages_turn = bool(se and (hasattr(se, 'current_player_idx') or hasattr(se, 'switch_player')))
+        if not self.state.winner and not sub_manages_turn:
             self._advance_turn()
+        elif sub_manages_turn:
+            # ensure engine idx matches sub after possible internal advance
+            if hasattr(se, 'current_player_idx'):
+                self.state.current_player_idx = se.current_player_idx
+
+        # DB persistence hook (best-effort; non-fatal)
+        try:
+            if self.state.winner:
+                from core.database import save_game, update_personal_best
+                players = [p.name for p in self.state.players]
+                save_game(self.state.mode, players, winner=self.state.winner)
+                for p in self.state.players:
+                    if hasattr(p, "score"):
+                        update_personal_best(p.name, self.state.mode, p.score)
+        except Exception:
+            pass  # DB optional
 
         return msg
 
@@ -559,6 +619,21 @@ class DartGameEngine:
         elif hasattr(se, 'record_throw') and isinstance(se, EliminatorGame):
             current_player = self.state.current_player()
             msg = se.record_throw(current_player.name, darts)
+        elif hasattr(se, 'record_hit') and isinstance(se, TeamRoundTheClock):
+            # TeamRoundTheClock expects per-dart bool hits; adapt 3-dart visit
+            current_player = self.state.current_player()
+            hits = 0
+            for d in darts:
+                base, mult = parse_dart_value(d)
+                # simplistic: any non-zero is a hit for team ATC relay style
+                if base > 0:
+                    hits += 1
+                    # call per hit
+                    try:
+                        se.record_hit(True)
+                    except Exception:
+                        pass
+            msg = f"{current_player.name}: {hits} hit(s) for team (adapted)"
         else:
             # Standard API: record_throw(darts) -> str
             msg = se.record_throw(darts)
@@ -576,6 +651,21 @@ class DartGameEngine:
                     self.state.legs_won[winner_name] += 1
                     if self.state.legs_won[winner_name] >= self.state.legs_to_win:
                         self.state.match_winner = winner_name
+
+        # Post-sub sync: current player idx, scores for main Player objects (for UI/display), recent_throws
+        try:
+            if hasattr(se, 'current_player_idx'):
+                self.state.current_player_idx = getattr(se, 'current_player_idx', self.state.current_player_idx)
+            if hasattr(se, 'scores') and isinstance(se.scores, dict):
+                for p in self.state.players:
+                    if p.name in se.scores:
+                        p.score = se.scores[p.name]
+            if hasattr(se, 'round_history') or hasattr(se, 'history'):
+                hist = getattr(se, 'round_history', None) or getattr(se, 'history', [])
+                if hist:
+                    self.state.recent_throws = (getattr(self.state, 'recent_throws', []) + hist[-3:])[-12:]
+        except Exception:
+            pass
 
         return msg
 
@@ -941,6 +1031,25 @@ class DartGameEngine:
         snap = self.state.redo_stack.pop()
         self.state.from_snapshot(snap)
         return True
+
+    def switch_player(self) -> str:
+        """Public API for voice/UI: advance to next player (or sub-engine equivalent)."""
+        if self.state.winner:
+            return "Game over."
+        # Let sub-engine manage if it has its own turn logic
+        se = self.state.sub_engine
+        if se and hasattr(se, 'switch_player') or hasattr(se, '_advance_player'):
+            try:
+                if hasattr(se, 'switch_player'):
+                    return se.switch_player() or "Turn passed (sub-engine)."
+                elif hasattr(se, '_advance_player'):
+                    se._advance_player()
+                    return "Turn passed (sub-engine)."
+            except Exception:
+                pass
+        self._advance_turn()
+        player = self.state.current_player()
+        return f"Turn passed to {player.name if player else 'next player'}."
 
     def get_bot_throw(self) -> List[int]:
         """Get the bot's throw for the current player."""

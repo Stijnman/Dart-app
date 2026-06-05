@@ -1,12 +1,12 @@
 """
-v2.4 Polished & Integrated Enhancements Tab
-Ready to replace or enhance an existing tab in streamlit_app.py (e.g. Analytics or add as new \"Advanced\" tab).
+v3.0 Advanced / Polished & Integrated Enhancements Tab
+(Formerly v2.4) Ready to enhance Play/Analytics or standalone "Advanced" tab.
 
 Features:
 - Proper st.session_state initialization
-- Real connections to game engine (remaining score, player data, throw history)
+- Real connections to game engine + custom modes
 - Better styling with containers, columns, and visual cards
-- All v2.4 features wired together
+- v3.0 features (analytics, practice, customs) wired together
 """
 
 import streamlit as st
@@ -47,13 +47,18 @@ def initialize_v24_state():
 def get_real_game_context():
     """Try to get real data from the game engine if available."""
     engine = st.session_state.get("engine")
-    if engine and hasattr(engine, "current_player"):
-        player = engine.current_player
+    if engine:
+        # Prefer public API + .score (real Player); compat for .remaining in stubs/old
+        p = engine.get_current_player() if hasattr(engine, "get_current_player") else getattr(engine, "current_player", None)
+        opp = getattr(engine, "opponent", None)
+        rem = getattr(p, "score", getattr(p, "remaining", 85)) if p else 85
+        orem = getattr(opp, "score", getattr(opp, "remaining", 62)) if opp else 62
+        throws = getattr(engine, "recent_throws", []) or getattr(getattr(engine, "state", None), "recent_throws", []) or []
         return {
-            "remaining": getattr(player, "remaining", 85),
-            "opponent_remaining": getattr(getattr(engine, "opponent", None), "remaining", 62),
-            "recent_throws": getattr(engine, "recent_throws", [])[-12:],
-            "current_leg": getattr(engine, "current_leg", 1),
+            "remaining": rem,
+            "opponent_remaining": orem,
+            "recent_throws": throws[-12:],
+            "current_leg": getattr(getattr(engine, "state", engine), "current_leg", getattr(engine, "current_leg", 1)),
         }
     # Fallback demo data
     return {

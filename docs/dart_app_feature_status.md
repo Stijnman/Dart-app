@@ -1,9 +1,11 @@
-# Dart Game Pro - Feature Status Report: 30 Cool Features
+# Dart Game Pro - Feature Status Report: 30 Cool Features + v3.0 Additions
 
 **Date**: 2026-06-05  
-**App Version**: v2.4 (current repo)  
+**App Version**: v3.0 (current repo)  
 **Source Wishlist**: 30 Cool Features for Dart-App (Not Yet Implemented).pdf  
-**Auditor**: ODBE Autonomous Hierarchical Orchestrator v2
+**Auditor**: ODBE Autonomous Hierarchical Orchestrator v2 + Community Analysis
+
+**Note**: v3.0 adds major new systems (Custom Game Modes with 15+ features, Sublime Analytics, Practice Suite) on top of v2.4 wishlist items. See README/CHANGELOG for added-things focus.
 
 ## Executive Summary
 The Dart-app repository (Stijnman/Dart-app) has evolved significantly beyond the original wishlist. Many features from the list are **already implemented** at base level (Killer, Shanghai, Tic-Tac-Toe, basic voice, achievements, themes, ELO/tournaments, basic analytics, DartBot). 

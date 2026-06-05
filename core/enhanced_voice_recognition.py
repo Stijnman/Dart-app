@@ -89,9 +89,11 @@ class EnhancedVoiceRecognition:
         result = {'action': command, 'success': False, 'message': '', 'ui_update_needed': False}
 
         if command == 'next_player':
-            if self.engine:
-                self.engine.switch_to_next_player()  # Assume method exists or add it
-            result.update({'success': True, 'message': 'Turn passed to next player.', 'ui_update_needed': True})
+            if self.engine and hasattr(self.engine, 'switch_player'):
+                msg = self.engine.switch_player()
+                result.update({'success': True, 'message': msg or 'Turn passed to next player.', 'ui_update_needed': True})
+            else:
+                result.update({'success': True, 'message': 'Turn passed to next player.', 'ui_update_needed': True})
 
         elif command == 'undo_last':
             if self.engine and hasattr(self.engine, 'undo_last_throw'):

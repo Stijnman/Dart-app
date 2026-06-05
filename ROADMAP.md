@@ -1,36 +1,38 @@
-# 🎯 Dart Game Pro - Roadmap (Updated v2.4)
+# 🎯 Dart Game Pro - Roadmap (Updated v3.0)
 
-**Current Version**: v2.4 (Stable + High Priority Polish)  
+**Current Version**: v3.0 (Sublime UI + Custom Game Modes + Analytics + Practice)  
 **Repository**: https://github.com/Stijnman/Dart-app  
-**Last Updated**: 2026-06-05 by ODBE Autonomous Hierarchical Orchestrator v2
+**Last Updated**: 2026-06-05
 
 ## Vision
 The most complete, intelligent, and engaging darts platform — from casual play to serious competitive training and community.
 
-## Current State (v2.4 – Just Shipped)
+## Current State (v3.0 – Just Shipped)
 
-### ✅ High Priority Completed / Enhanced (from 30 Cool Features list)
-- **#9 Voice Commands** — Full command support added (skip turn, undo last dart, show stats, checkout suggestion, etc.). Parser + execution layer ready. Integration snippet provided.
-- **#15 Advanced Heat Maps** — Enhanced with 3D trajectory, consistency clusters, drift trends. Plotly interactive version + matplotlib fallback. Analysis insights included.
-- **#21 Difficulty Scaling** — SmartBot auto-adjustment logic completed. Performance metrics → dynamic bot level changes during match with player-friendly messages.
-- **#29 / #30 Customizable Themes + Eye Comfort** — Polished with new "Holographic Future" theme + full eye comfort (blue light filter, brightness, OLED optimized). Easy UI controls.
+### ✅ Major Additions in v3.0 (Focus: Added Features, Sublime Experience)
+- **Custom Game Mode System (Flagship)**: Full wizard, Surprise Me, preview cards, 15+ polish features (edit/dup/del, stats, export JSON, better names, more rules, tags, est. time, funny msgs, etc.). Real playable integration + stats.
+- **Sublime Analytics Dashboard**: First-9, checkout % by remaining, advanced Plotly heatmaps (3D+), PPI, per-leg history, CSV/JSON exports.
+- **Practice & Training Suite**: Checkout Trainer (real core/checkout), Target Practice drills, integrated with customs + classics.
+- **UI/UX Overhaul (Sublime Layout)**: Modern CSS (cards, themes), handicaps + multi-profiles in setup, achievements live in UI, local leaderboards (per custom/mode), multiplayer lobby (create/join), voice polish, TV/onboarding hints, responsive/emoji-rich.
+- More game types fully wired/exposed (Cricket variants, Party, subs real).
+- Enhanced DB for customs/stats, exports everywhere, achievements integration.
 
-### Other Strong Areas in v2.4
-- 30+ game modes with universal engine (Killer, Shanghai, Tic-Tac-Toe, many practice + specialty)
-- DartBot 12 levels + SmartBot analyzer
-- Career mode, ELO, tournaments, 35 achievements
-- Basic + advanced analytics foundation
-- Voice input (scoring + new commands)
-- 5+ themes with customization
-- Clean architecture, 100+ tests, Streamlit UI
+### Other Strong Areas
+- 30+ game modes with universal engine + real sub-engines (no more CountUp fallbacks for many).
+- DartBot 12 levels + SmartBot + adaptive.
+- Career, ELO, tournaments, 35 achievements (now UI-visible).
+- Voice, coach, heatmaps, PPI, themes (eye comfort).
+- Clean architecture, 100+ tests, Streamlit + Plotly/pandas.
 
-## Medium Priority – v2.5 (Next Sprint Focus)
-- Knockout Tournament enhancements (better live brackets, historical tracking)
-- **Ladder League System** (#7) — Full seasonal persistent promo/demotion
-- **Pressure Performance Index** (#16) — Clutch factor tracking
-- **Coaching Mode** (#23) — Deeper "why" explanations + dedicated mode
-- Killer Variants (#1) — Soft/Hard/Sudden Death lives system (starter code provided)
-- Darts Golf (#4) or Around the Board Relay refinements
+## Medium / Future (v3.x+)
+- Knockout Tournament enhancements, full live brackets.
+- Deeper AI Coach + personalized recs/weakness analysis.
+- Real-time online multiplayer (WebSockets beyond lobby stub).
+- More custom rule enforcement (conditional logic, full builder in UI).
+- Mobile responsiveness, AR hints, streaming overlays.
+- Per-custom leaderboards + seasonal play.
+
+See README for sublime v3.0 layout + added-things focus. Previous roadmap items largely completed or integrated into v3.0 customs/analytics.
 
 ## Future / Low Priority (Backlog)
 - Multilingual AI Commentary (#10)

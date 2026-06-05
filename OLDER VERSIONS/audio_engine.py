@@ -94,13 +94,17 @@ class TextToSpeech:
     
     def _synthesize_speech(self, text: str) -> None:
         """Synthesize and play speech (implementation depends on platform)."""
-        # Placeholder for actual TTS implementation
-        # In production, this would use:
-        # - Google Cloud Text-to-Speech API
-        # - Azure Speech Services
-        # - pyttsx3 (offline)
-        # - gTTS (Google Translate TTS)
-        pass
+        try:
+            import pyttsx3
+            tts = pyttsx3.init()
+            # rate/volume from config if present
+            rate = int(150 * getattr(self, "config", type("c",(),{"speech_rate":1.0})()).speech_rate)
+            tts.setProperty("rate", max(50, min(300, rate)))
+            tts.say(text)
+            tts.runAndWait()
+        except Exception:
+            # graceful fallback (no TTS)
+            print(f"[TTS fallback] {text}")
     
     def announce_score(self, player: str, score: int, total: int) -> None:
         """Announce a player's score."""

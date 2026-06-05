@@ -1,10 +1,9 @@
 """
-Dart Game Pro v2.4 — Main Entry Point
-Refactored: Direct Streamlit entry, no subprocess, proper error handling, v2.4.
+Dart Game Pro v3.0 — Main Entry Point
+Major release: Sublime UI overhaul, full Custom Game Mode system, rich Analytics, Practice Drills, multiplayer lobby, achievements, exports & more.
 """
 
 import sys
-import os
 from pathlib import Path
 
 # Add the project root to Python path

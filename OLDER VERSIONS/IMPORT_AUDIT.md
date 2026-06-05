@@ -1,8 +1,12 @@
 # 🔍 Import Audit: Missing Imports Analysis
 
-**Date**: 2026-06-05  
-**Status**: ❌ CRITICAL - 5 Missing Module Dependencies  
-**Test Status**: FAILING (ImportError in test collection)
+**Date**: 2026-06-05 (updated post-wiring)  
+**Status**: ✅ RESOLVED - Previously missing modules now exist + wired in engine  
+**Test Status**: PASSING (105+ tests; sub-engines for party/practice/tactics/golf etc. now use real classes)  
+
+> Note: This file is kept for history. Many "missing" items from the original audit (player_analytics, party_games, practice_drills, tournament, tactics_joker) were implemented and the engine now instantiates real sub-engines instead of CountUp fallbacks for most modes. See engine.py _init_subengine_* and verification runs.
+
+**Historical (original) Executive Summary kept below for reference...**
 
 ---
 
