@@ -23,18 +23,18 @@ Transform Dart Game Pro into the most complete, intelligent, and engaging darts 
 - Clean architecture + 102 tests
 - Streamlit UI with 9 tabs
 
-**Note**: As of latest sync, `ROADMAP.md` and `docs/` folder do not yet exist in the repository.
+**Progress Update**: Customizable Themes and Voice Commands foundation added.
 
 ---
 
 ## High Priority – v2.4 (Next Sprint)
 
-| Feature                        | #  | Status       | Effort      | Notes |
-|--------------------------------|----|--------------|-------------|-------|
-| Voice Commands                 | 9  | Planned      | Medium      | Speech-to-text |
-| Advanced Heat Maps             | 15 | Planned      | Medium-High | Interactive + 3D |
-| Difficulty Scaling (SmartBot)  | 21 | In Progress  | Low         | Core logic ready |
-| Customizable Dartboard Themes  | 29 | Planned      | Low         | Visual polish |
+| Feature                        | #  | Status          | Effort      | Notes |
+|--------------------------------|----|-----------------|-------------|-------|
+| Voice Commands                 | 9  | In Progress     | Medium      | Parser created |
+| Advanced Heat Maps             | 15 | Planned         | Medium-High | Interactive + 3D |
+| Difficulty Scaling (SmartBot)  | 21 | In Progress     | Low         | Core logic ready |
+| Customizable Dartboard Themes  | 29 | Done (Core)     | Low         | `core/themes.py` committed |
 
 ---
 
