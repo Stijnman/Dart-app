@@ -45,10 +45,10 @@ st.set_page_config(page_title="Dart Game Pro v2.3", page_icon="🎯", layout="wi
 THEMES = {
     "Dark Pro": {"bg":"#0e1117","fg":"#fafafa","accent":"#00cc88","card":"#1e2329","cbg":"linear-gradient(135deg,#1a472a,#0e2a1a)","cborder":"#00cc66","bbg":"#2a1515","bborder":"#c62828","hbg":"#2a1800","hborder":"#ff6d00"},
     "Midnight Blue": {"bg":"#0a1628","fg":"#e0e6ed","accent":"#4fc3f7","card":"#152238","cbg":"linear-gradient(135deg,#0d2b45,#0a1628)","cborder":"#4fc3f7","bbg":"#2a1015","bborder":"#e53935","hbg":"#1a1000","hborder":"#ffa726"},
-    "Darts Hall": {"bg":"#1a1200","fg":"#f5f0e0","accent":"#ffb300","card":"#2a2008","cbg":"linear-gradient(135deg,#2a1a00,#1a1200)","cborder":"#ffb300","bbg":"#2a1010","bborder":"#ff5252","hbg":"#2a1800","hborder":"#ff6d00"},
-    "Emerald": {"bg":"#0a1f0a","fg":"#e8f5e9","accent":"#69f0ae","card":"#143614","cbg":"linear-gradient(135deg,#0d2b15,#0a1f0a)","cborder":"#69f0ae","bbg":"#1a0a0a","bborder":"#ff8a80","hbg":"#1a1a00","hborder":"#ffd54f"},
-    "Light": {"bg":"#ffffff","fg":"#212121","accent":"#2e7d32","card":"#f5f5f5","cbg":"linear-gradient(135deg,#e8f5e9,#c8e6c9)","cborder":"#2e7d32","bbg":"#ffebee","bborder":"#c62828","hbg":"#fff3e0","hborder":"#e65100"},
-    "Red Hot": {"bg":"#1a0a0a","fg":"#ffe0e0","accent":"#ff4444","card":"#2a1515","cbg":"linear-gradient(135deg,#2a0a0a,#1a0a0a)","cborder":"#ff4444","bbg":"#2a0a0a","bborder":"#ff8a80","hbg":"#2a1000","hborder":"#ffaa00"},
+    "Darts Hall": {"bg":"#1a1200","fg":"#f5f0e0","accent":"#ffb300","card":"#2a2008","cbg":"linear-gradient(135deg,#2a1a00,#1a1200)","cborder":"#ffb300","bbg":"#2a1010","bborder":"#ff5252","hbg":"#2a1800","hborder":"#ffb300"},
+    "Emerald": {"bg":"#0a1f0a","fg":"#e8f5e9","accent":"#69f0ae","card":"#143614","cbg":"linear-gradient(135deg,#0d2b15,#0a1f0a)","cborder":"#69f0ae","bbg":"#1a0a0a","bborder":"#ff8a80","hbg":"#1a1800","hborder":"#69f0ae"},
+    "Light": {"bg":"#ffffff","fg":"#212121","accent":"#2e7d32","card":"#f5f5f5","cbg":"linear-gradient(135deg,#e8f5e9,#c8e6c9)","cborder":"#2e7d32","bbg":"#ffebee","bborder":"#c62828","hbg":"#fff3e0","hborder":"#ff6d00"},
+    "Red Hot": {"bg":"#1a0a0a","fg":"#ffe0e0","accent":"#ff4444","card":"#2a1515","cbg":"linear-gradient(135deg,#2a0a0a,#1a0a0a)","cborder":"#ff4444","bbg":"#2a0a0a","bborder":"#ff8a80","hbg":"#2a1800","hborder":"#ff6d00"},
 }
 
 def apply_theme():
@@ -128,7 +128,7 @@ def play_tab():
             mode = {"Standard":"cricket","Cut-Throat":"cut_throat","No-Score":"no_score_cricket","Tactic":"tactic_cricket","Random":"random_cricket","Hammer":"hammer_cricket","Cricket Count Up":"cricket_count_up"}.get(mode,"cricket")
         elif cat == "Practice":
             mode = st.selectbox("Game", ["Bob's 27","Around the Clock","Shanghai","Count Up","Bermuda","JDC Challenge","41-60","Cricket Count Up"])
-            mode = {"Bob's 27":"bobs_27","Around the Clock":"around_the_clock","Shanghai":"shanghai","Count Up":"count_up","Bermuda":"bermuda","JDC Challenge":"jdc","41-60":"41_60","Cricket Count Up":"cricket_count_up"}.get(mode,"bobs_27")
+            mode = {"Bob's 27":"bobs_27","Around the Clock":"around_the_clock","Shanghai":"shanghai","Count Up":"count_up","Bermuda":"bermuda","JDC Challenge":"jdc","41-60":"41_60","Cricket Count Up":"cricket_count_up"}.get(mode,"count_up")
             if mode == "bobs_27": variant = st.selectbox("Difficulty", ["Easy","Standard","Hard"], 1).lower()
             elif mode == "around_the_clock": variant = st.selectbox("Variant", ["Singles","Doubles Only","Triples Only"], 0).lower().replace(" only","")
             elif mode == "shanghai": variant = st.selectbox("Length", ["Quick (7)", "Full (20)"], 0); variant = "quick" if "Quick" in variant else "full"
@@ -258,7 +258,7 @@ def start_game(pdata, mode, fm, vs_bot, bot_lvl, variant, smartbot, coin_flip):
     if coin_flip:
         start_idx = random.randint(0, len(pobjs)-1)
     
-    engine = DartGameEngine(mode=mode if mode.isdigit() or mode in ["x01"] else ml, players=pobjs,
+    engine = DartGameEngine(mode=mode if mode.isdigit() or mode in ["x01"] else ml, players=posebjs,
         match_format=fm, bot_enabled=vs_bot, bot_difficulty=bot_lvl, variant=variant)
     engine.state.current_player_idx = start_idx
     
@@ -309,7 +309,7 @@ def render_game(smartbot, use_vboard):
         cos = engine.get_checkout_suggestion()
         if cos:
             t = st.session_state._t
-            st.markdown(f"<div class='checkout-box'><h3 style='color:{t['accent']};margin:0;'>🎯 CHECKOUT: {current.score}</h3><div style='color:#ccffcc;font-size:1.4rem;font-weight:bold;'>{cos[0]}</div>{f'<div style=\"color:#888;font-size:0.9rem;\">Alt: {cos[1]}</div>' if len(cos)>1 else ''}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='checkout-box'><h3 style='color:{t['accent']};margin:0;'>🎯 CHECKOUT: {current.score}</h3><div style='color:#ccffcc;font-size:1.4rem;font-weight:bold;'>{cos[0]}</div></div>", unsafe_allow_html=True)
             if state.turn_number > 1:
                 cc = st.session_state.commentary.get_commentary("setup", current.name, remaining=current.score)
                 st.caption(cc)
@@ -752,11 +752,11 @@ def achievements_tab():
     
     st.subheader("Unlocked")
     for a in ach.get_unlocked():
-        st.markdown(f"<div class='feat-card ach-un'><span style='font-size:1.5rem;'>{a.icon}</span> <b>{a.name}</b> <span style='color:#888;'>({a.tier.upper()})</span><br/><span style='color:#888;font-size:0.85rem;'>{a.description}</span></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='feat-card ach-un'><span style='font-size:1.5rem;'>{a.icon}</span> <b>{a.name}</b> <span style='color:#888;'>({a.tier.upper()})</span><br/><span style='color:#888;font-size:0.9rem;'>{a.description}</span></div>", unsafe_allow_html=True)
     
     st.subheader("Locked")
     for a in ach.get_locked():
-        st.markdown(f"<div class='feat-card ach-lk'><span style='font-size:1.5rem;'>🔒</span> <b>{a.name}</b> <span style='color:#888;'>({a.tier.upper()})</span><br/><span style='color:#888;font-size:0.85rem;'>{a.description}</span></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='feat-card ach-lk'><span style='font-size:1.5rem;'>🔒</span> <b>{a.name}</b> <span style='color:#888;'>({a.tier.upper()})</span><br/><span style='color:#888;font-size:0.9rem;'>{a.description}</span></div>", unsafe_allow_html=True)
     
     st.subheader("📅 Challenges")
     for c in ach.get_challenges():
@@ -793,7 +793,7 @@ def analytics_tab():
     st.subheader("🔍 AI Pattern Detection")
     patterns = PatternDetector.detect_patterns(demo_throws * 3)
     for pat in patterns:
-        color = {"high":"🔴","medium":"🟡","low":"🟢","info":"ℹ️","good":"✅","fatigue":"😴","opening":"🎯","inconsistency":"📊","scoring_power":"💪","no_180s":"🎱"}.get(pat['type'], "⚪")
+        color = {"high":"🔴","medium":"🟡","low":"🟢","info":"ℹ️","good":"✅","fatigue":"😴","opening":"🎯","inconsistency":"📊","scoring_power":"💪","no_180s":"🎱"}.get(pat['severity'], "ℹ️")
         st.markdown(f"<div class='feat-card'>{color} <b>{pat['type'].replace('_',' ').title()}</b><br/>{pat['message']}<br/>💡 {pat['recommendation']}</div>", unsafe_allow_html=True)
     
     st.subheader("⚠️ Weakness Analysis")
