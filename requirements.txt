@@ -1,4 +1,4 @@
 streamlit>=1.30.0
 matplotlib>=3.7.0
-pyttsx3>=2.90
+pyttsx3>=2.99
 pytest>=7.4.0
