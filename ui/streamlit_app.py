@@ -8,6 +8,14 @@ import numpy as np
 from datetime import datetime
 from typing import List, Optional
 import random
+try:
+    import websockets
+    import asyncio
+    WS_AVAILABLE = True
+except ImportError:
+    WS_AVAILABLE = False
+    websockets = None
+    asyncio = None
 
 # Core imports - prefer real
 try:
@@ -762,7 +770,7 @@ def main():
 
     with st.sidebar:
         st.header("Navigation")
-        pages = ["Play", "Analytics", "v3.0 Advanced", "Career", "Settings"]
+        pages = ["Play", "Analytics", "v3.0 Advanced", "Career", "Online", "Settings"]
         page = st.radio("Go to", pages, index=0, key="nav_radio")
         st.divider()
         if st.session_state.get("engine"):
@@ -807,8 +815,71 @@ def main():
         show_v24_polished_tab()  # v3.0 advanced tools & features
     elif page == "Career":
         show_career_page()
+    elif page == "Online":
+        show_online_multiplayer_page()
     elif page == "Settings":
         show_settings_page()
+
+def show_online_multiplayer_page():
+    st.header("🌐 Online Multiplayer (v3.1 WebSocket)")
+    st.caption("Connect to FastAPI server (run `python -m core.server.main` on port 8001). Demo uses localhost.")
+
+    if not WS_AVAILABLE:
+        st.warning("Install websockets: pip install websockets. Using simulated local lobby for now.")
+        # Fallback to old lobby
+        try:
+            from core.systems import LobbySystem
+            lobby = LobbySystem()
+            if st.button("Create Demo Lobby"):
+                m = lobby.create_lobby("You")
+                st.session_state.demo_lobby = m.to_dict() if hasattr(m, 'to_dict') else {"id": "demo"}
+            if st.session_state.get("demo_lobby"):
+                st.json(st.session_state.demo_lobby)
+        except:
+            pass
+        return
+
+    server_url = st.text_input("Server WS URL", "ws://localhost:8001/ws")
+    match_id = st.text_input("Match ID (or create via /matches API)", "demo-match-123")
+    player_name = st.text_input("Your Name", st.session_state.get("player_names", ["You"])[0])
+
+    if "ws_messages" not in st.session_state:
+        st.session_state.ws_messages = []
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Connect & Join"):
+            st.session_state.ws_connected = True
+            # Note: Full async WS in Streamlit needs threading or asyncio.run in callback; simplified here
+            st.info("In production: use st.experimental_rerun loop or separate thread for WS. For demo, simulate messages.")
+            # Simulate connect
+            st.session_state.ws_messages.append(f"Connected to {match_id} as {player_name}")
+    with col2:
+        if st.button("Disconnect"):
+            st.session_state.ws_connected = False
+            st.session_state.ws_messages = []
+
+    if st.session_state.get("ws_connected"):
+        dart_input = st.text_input("Throw darts (comma sep, e.g. 20,20,20)", "20,20,20")
+        if st.button("Send Throw"):
+            try:
+                darts = [int(x.strip()) for x in dart_input.split(",")]
+                # In real: await ws.send(json of throw)
+                st.session_state.ws_messages.append(f"You threw {darts}")
+                # Simulate response
+                st.session_state.ws_messages.append(f"Server: Throw processed, scores updated")
+            except:
+                st.error("Invalid darts")
+        cmd = st.selectbox("Command", ["undo", "next"])
+        if st.button("Send Command"):
+            st.session_state.ws_messages.append(f"Command: {cmd}")
+            st.session_state.ws_messages.append("Server: Command executed")
+
+        st.subheader("Live Messages")
+        for msg in st.session_state.ws_messages[-10:]:
+            st.text(msg)
+
+        st.caption("Full integration: Connect to WS, send ThrowEvent/CommandEvent, receive state broadcasts. See core/server/main.py for backend.")
 
 if __name__ == "__main__":
     main()

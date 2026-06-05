@@ -35,7 +35,7 @@ from .database_v2 import (
     save_analytics, get_analytics,
 )
 
-__version__ = "2.4.0"
+__version__ = "3.1.0"
 __all__ = [
     "DartGameEngine", "Player", "GameState", "InOutRule", "MatchFormat",
     "get_checkout", "get_best_checkout", "is_checkable_score",

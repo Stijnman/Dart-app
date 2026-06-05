@@ -7,6 +7,14 @@ python-dateutil>=2.8.2
 matplotlib>=3.7.0
 scipy>=1.10.0
 pyttsx3>=2.90
+# v3.1+ server
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+redis>=5.0.0
+websockets>=12.0
 # Optional for full voice (mic): SpeechRecognition pyaudio  (platform specific)
 # For tests: pytest
+# For deployment: gunicorn, docker
 
