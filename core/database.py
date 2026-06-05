@@ -1,346 +1,270 @@
 """
-Enhanced SQLite database layer with player profiles, game history, and stats aggregation.
+Database layer for player profiles, game history, and personal bests.
+Refactored: Context managers, UPSERT, shared DB_PATH, input sanitization.
 """
 
 import sqlite3
 import json
 import os
+from typing import List, Dict, Optional, Any
 from datetime import datetime
-from typing import List, Dict, Optional
+from pathlib import Path
 
-DB_PATH = "data/darts_v2.db"
+
+# Shared database path (absolute, based on this file's location)
+BASE_DIR = Path(__file__).parent.parent
+DB_PATH = str(BASE_DIR / "data" / "darts_v2.db")
+
+# Ensure data directory exists
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+
+def _sanitize_name(name: str) -> str:
+    """Sanitize player name to prevent injection issues."""
+    return name.strip()[:50]  # Limit length, strip whitespace
 
 
 def init_db():
-    """Initialize the database with all tables and views."""
-    os.makedirs("data", exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    
-    # Players table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS players (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
-            picture TEXT,
-            wins INTEGER DEFAULT 0,
-            legs_won INTEGER DEFAULT 0,
-            sets_won INTEGER DEFAULT 0,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Games table (match-level)
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS games (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            mode TEXT NOT NULL,
-            variant TEXT DEFAULT 'standard',
-            winner TEXT,
-            match_format TEXT DEFAULT 'single_game',
-            in_rule TEXT DEFAULT 'straight',
-            out_rule TEXT DEFAULT 'double',
-            starting_score INTEGER DEFAULT 501,
-            legs_played INTEGER DEFAULT 1,
-            players_json TEXT,
-            history_json TEXT,
-            stats_json TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Player stats table (per-game stats for aggregation)
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS player_stats (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            player_name TEXT NOT NULL,
-            game_id INTEGER,
-            mode TEXT,
-            won INTEGER DEFAULT 0,
-            three_dart_avg REAL DEFAULT 0,
-            first_nine_avg REAL DEFAULT 0,
-            checkout_pct REAL DEFAULT 0,
-            highest_checkout INTEGER DEFAULT 0,
-            ton_eighties INTEGER DEFAULT 0,
-            ton_forties INTEGER DEFAULT 0,
-            hundreds INTEGER DEFAULT 0,
-            total_throws INTEGER DEFAULT 0,
-            total_score INTEGER DEFAULT 0,
-            darts_thrown INTEGER DEFAULT 0,
-            best_throw INTEGER DEFAULT 0,
-            legs_played INTEGER DEFAULT 0,
-            legs_won INTEGER DEFAULT 0,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (game_id) REFERENCES games(id)
-        )
-    ''')
-    
-    # Personal bests table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS personal_bests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            player_name TEXT NOT NULL,
-            category TEXT NOT NULL,
-            value REAL NOT NULL,
-            details TEXT,
-            achieved_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(player_name, category)
-        )
-    ''')
-    
-    # Head-to-head records
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS h2h_records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            player_a TEXT NOT NULL,
-            player_b TEXT NOT NULL,
-            player_a_wins INTEGER DEFAULT 0,
-            player_b_wins INTEGER DEFAULT 0,
-            last_played TEXT,
-            UNIQUE(player_a, player_b)
-        )
-    ''')
-    
-    # Create indexes
-    c.execute("CREATE INDEX IF NOT EXISTS idx_stats_player ON player_stats(player_name)")
-    c.execute("CREATE INDEX IF NOT EXISTS idx_stats_game ON player_stats(game_id)")
-    c.execute("CREATE INDEX IF NOT EXISTS idx_games_winner ON games(winner)")
-    c.execute("CREATE INDEX IF NOT EXISTS idx_games_mode ON games(mode)")
-    
-    conn.commit()
-    conn.close()
-
-
-def save_player(name: str, picture: Optional[str] = None) -> bool:
-    """Save or update a player. Returns True if new player."""
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT id FROM players WHERE name = ?", (name,))
-    existing = c.fetchone()
-    
-    if existing:
-        if picture:
-            c.execute("UPDATE players SET picture = ? WHERE name = ?", (picture, name))
+    """Initialize the database with all tables."""
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS players (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                picture TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS games (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mode TEXT NOT NULL,
+                players_json TEXT NOT NULL,
+                history_json TEXT NOT NULL,
+                winner TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS personal_bests (
+                player_name TEXT PRIMARY KEY,
+                highest_avg REAL DEFAULT 0,
+                best_checkout INTEGER DEFAULT 0,
+                most_180s INTEGER DEFAULT 0,
+                highest_throw INTEGER DEFAULT 0,
+                total_games INTEGER DEFAULT 0,
+                total_wins INTEGER DEFAULT 0,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS player_stats (
+                player_name TEXT PRIMARY KEY,
+                stats_json TEXT NOT NULL DEFAULT '{}',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS schema_version (
+                version INTEGER PRIMARY KEY
+            )
+        """)
+        # Set schema version
+        conn.execute("INSERT OR IGNORE INTO schema_version (version) VALUES (1)")
         conn.commit()
-        conn.close()
-        return False
-    
-    c.execute(
-        "INSERT INTO players (name, picture, created_at) VALUES (?, ?, ?)",
-        (name, picture, datetime.now().isoformat())
-    )
-    conn.commit()
-    conn.close()
+
+
+def get_db_version() -> int:
+    """Get current database schema version."""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.execute("SELECT version FROM schema_version LIMIT 1")
+        row = cursor.fetchone()
+        return row[0] if row else 0
+
+
+def migrate_db():
+    """Run database migrations."""
+    current_version = get_db_version()
+
+    with sqlite3.connect(DB_PATH) as conn:
+        if current_version < 1:
+            # Initial schema already created in init_db
+            conn.execute("INSERT OR REPLACE INTO schema_version (version) VALUES (1)")
+
+        # Future migrations go here
+        # if current_version < 2:
+        #     conn.execute("ALTER TABLE ...")
+        #     conn.execute("UPDATE schema_version SET version = 2")
+
+        conn.commit()
+
+
+def save_player(name: str, picture: str = None) -> bool:
+    """Save or update a player profile."""
+    name = _sanitize_name(name)
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+            INSERT INTO players (name, picture) VALUES (?, ?)
+            ON CONFLICT(name) DO UPDATE SET picture=excluded.picture
+        """, (name, picture))
+        conn.commit()
     return True
 
 
-def get_all_players() -> List[Dict]:
-    """Get all registered players."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute("SELECT name, picture, wins, legs_won, created_at FROM players ORDER BY name")
-    rows = c.fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
-
 def get_player(name: str) -> Optional[Dict]:
-    """Get a specific player."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute("SELECT * FROM players WHERE name = ?", (name,))
-    row = c.fetchone()
-    conn.close()
-    return dict(row) if row else None
+    """Get a player by name."""
+    name = _sanitize_name(name)
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.execute("SELECT * FROM players WHERE name = ?", (name,))
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
+        return None
 
 
-def save_game(
-    mode: str,
-    winner: str,
-    players: List[Dict],
-    history: List[Dict],
-    stats: Optional[Dict] = None,
-    variant: str = "standard",
-    match_format: str = "single_game",
-    in_rule: str = "straight",
-    out_rule: str = "double",
-    starting_score: int = 501,
-    legs_played: int = 1,
-) -> int:
-    """Save a completed game. Returns game ID."""
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''
-        INSERT INTO games (mode, variant, winner, match_format, in_rule, out_rule,
-                          starting_score, legs_played, players_json, history_json, stats_json, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        mode, variant, winner, match_format, in_rule, out_rule,
-        starting_score, legs_played,
-        json.dumps(players), json.dumps(history),
-        json.dumps(stats) if stats else None,
-        datetime.now().isoformat()
-    ))
-    game_id = c.lastrowid
-    conn.commit()
-    conn.close()
-    return game_id
+def get_all_players() -> List[Dict]:
+    """Get all players."""
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.execute("SELECT * FROM players ORDER BY name")
+        return [dict(row) for row in cursor.fetchall()]
 
 
-def save_player_stats(player_name: str, game_id: int, mode: str, stats: Dict):
-    """Save detailed player stats for a game."""
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''
-        INSERT INTO player_stats
-        (player_name, game_id, mode, won, three_dart_avg, first_nine_avg,
-         checkout_pct, highest_checkout, ton_eighties, ton_forties, hundreds,
-         total_throws, total_score, darts_thrown, best_throw, legs_played, legs_won, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        player_name, game_id, mode,
-        stats.get('won', 0),
-        stats.get('three_dart_avg', 0),
-        stats.get('first_nine_avg', 0),
-        stats.get('checkout_pct', 0),
-        stats.get('highest_checkout', 0),
-        stats.get('ton_eighties', 0),
-        stats.get('ton_forties', 0),
-        stats.get('hundreds', 0),
-        stats.get('total_throws', 0),
-        stats.get('total_score', 0),
-        stats.get('darts_thrown', 0),
-        stats.get('best_throw', 0),
-        stats.get('legs_played', 1),
-        stats.get('legs_won', 0),
-        datetime.now().isoformat()
-    ))
-    conn.commit()
-    conn.close()
+def save_game(mode: str, players: List[Dict], history: List[Dict], winner: str = None) -> int:
+    """Save a completed game."""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.execute("""
+            INSERT INTO games (mode, players_json, history_json, winner)
+            VALUES (?, ?, ?, ?)
+        """, (
+            mode,
+            json.dumps(players, default=str),
+            json.dumps(history, default=str),
+            winner,
+        ))
+        conn.commit()
+        return cursor.lastrowid
 
 
-def update_personal_best(player_name: str, category: str, value: float, details: str = ""):
-    """Update a personal best if the new value exceeds the old."""
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    
-    c.execute("SELECT value FROM personal_bests WHERE player_name = ? AND category = ?",
-              (player_name, category))
-    row = c.fetchone()
-    
-    is_higher_better = category not in ['best_leg_darts', 'worst_leg_darts']
-    
-    if row is None:
-        c.execute('''
-            INSERT INTO personal_bests (player_name, category, value, details, achieved_at)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (player_name, category, value, details, datetime.now().isoformat()))
-    elif (is_higher_better and value > row[0]) or (not is_higher_better and value < row[0]):
-        c.execute('''
-            UPDATE personal_bests SET value = ?, details = ?, achieved_at = ?
-            WHERE player_name = ? AND category = ?
-        ''', (value, details, datetime.now().isoformat(), player_name, category))
-    
-    conn.commit()
-    conn.close()
-
-
-def get_personal_bests(player_name: str) -> Dict[str, dict]:
-    """Get all personal bests for a player."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute('''
-        SELECT category, value, details, achieved_at 
-        FROM personal_bests WHERE player_name = ?
-    ''', (player_name,))
-    rows = c.fetchall()
-    conn.close()
-    return {r['category']: dict(r) for r in rows}
-
-
-def get_recent_games(limit: int = 10) -> List[Dict]:
+def get_games(limit: int = 50, offset: int = 0) -> List[Dict]:
     """Get recent games."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute('''
-        SELECT id, mode, variant, winner, match_format, starting_score, created_at
-        FROM games ORDER BY id DESC LIMIT ?
-    ''', (limit,))
-    rows = c.fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.execute("""
+            SELECT * FROM games ORDER BY created_at DESC LIMIT ? OFFSET ?
+        """, (limit, offset))
+        return [dict(row) for row in cursor.fetchall()]
 
 
-def get_player_stats(player_name: str) -> Dict:
-    """Get aggregated stats for a player."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    
-    c.execute('''
-        SELECT 
-            COUNT(*) as games_played,
-            SUM(won) as games_won,
-            AVG(three_dart_avg) as avg_three_dart,
-            AVG(first_nine_avg) as avg_first_nine,
-            MAX(best_throw) as best_throw,
-            SUM(ton_eighties) as total_180s,
-            SUM(ton_forties) as total_140s,
-            SUM(hundreds) as total_100s,
-            SUM(total_throws) as total_throws,
-            SUM(total_score) as total_score,
-            SUM(darts_thrown) as total_darts
-        FROM player_stats WHERE player_name = ?
-    ''', (player_name,))
-    row = c.fetchone()
-    conn.close()
-    
-    if row:
-        stats = dict(row)
-        if stats['total_throws']:
-            stats['overall_avg'] = round(stats['total_score'] / stats['total_throws'], 2)
-        else:
-            stats['overall_avg'] = 0
-        return stats
-    return {}
+def get_player_games(player_name: str, limit: int = 50) -> List[Dict]:
+    """Get games for a specific player."""
+    player_name = _sanitize_name(player_name)
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.execute("""
+            SELECT * FROM games 
+            WHERE players_json LIKE ? 
+            ORDER BY created_at DESC LIMIT ?
+        """, (f'%"name": "{player_name}"%', limit))
+        return [dict(row) for row in cursor.fetchall()]
 
 
-def get_leaderboard() -> List[Dict]:
-    """Get global leaderboard by wins."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute('''
-        SELECT 
-            p.name,
-            p.wins,
-            COUNT(ps.id) as games_played,
-            COALESCE(AVG(ps.three_dart_avg), 0) as avg_score
-        FROM players p
-        LEFT JOIN player_stats ps ON p.name = ps.player_name
-        GROUP BY p.name
-        ORDER BY p.wins DESC, avg_score DESC
-        LIMIT 50
-    ''')
-    rows = c.fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
+def update_personal_best(player_name: str, stats: Dict) -> bool:
+    """
+    Update personal bests using UPSERT (atomic operation).
+    FIXED: No more read-then-write race condition.
+    """
+    player_name = _sanitize_name(player_name)
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+            INSERT INTO personal_bests (player_name, highest_avg, best_checkout, most_180s, highest_throw, total_games, total_wins)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(player_name) DO UPDATE SET
+                highest_avg = MAX(highest_avg, excluded.highest_avg),
+                best_checkout = MAX(best_checkout, excluded.best_checkout),
+                most_180s = MAX(most_180s, excluded.most_180s),
+                highest_throw = MAX(highest_throw, excluded.highest_throw),
+                total_games = total_games + excluded.total_games,
+                total_wins = total_wins + excluded.total_wins,
+                updated_at = CURRENT_TIMESTAMP
+        """, (
+            player_name,
+            stats.get("highest_avg", 0),
+            stats.get("best_checkout", 0),
+            stats.get("most_180s", 0),
+            stats.get("highest_throw", 0),
+            stats.get("total_games", 1),
+            stats.get("total_wins", 0),
+        ))
+        conn.commit()
+    return True
 
 
-def get_h2h_record(player_a: str, player_b: str) -> Dict:
-    """Get head-to-head record between two players."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute('''
-        SELECT * FROM h2h_records 
-        WHERE (player_a = ? AND player_b = ?) OR (player_a = ? AND player_b = ?)
-    ''', (player_a, player_b, player_b, player_a))
-    row = c.fetchone()
-    conn.close()
-    return dict(row) if row else {"player_a": player_a, "player_b": player_b, "player_a_wins": 0, "player_b_wins": 0}
+def get_personal_best(player_name: str) -> Optional[Dict]:
+    """Get personal bests for a player."""
+    player_name = _sanitize_name(player_name)
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.execute("SELECT * FROM personal_bests WHERE player_name = ?", (player_name,))
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
+        return None
+
+
+def save_player_stats(player_name: str, stats: Dict) -> bool:
+    """Save player statistics."""
+    player_name = _sanitize_name(player_name)
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+            INSERT INTO player_stats (player_name, stats_json)
+            VALUES (?, ?)
+            ON CONFLICT(player_name) DO UPDATE SET
+                stats_json = excluded.stats_json,
+                updated_at = CURRENT_TIMESTAMP
+        """, (player_name, json.dumps(stats, default=str)))
+        conn.commit()
+    return True
+
+
+def get_player_stats(player_name: str) -> Optional[Dict]:
+    """Get player statistics."""
+    player_name = _sanitize_name(player_name)
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.execute("SELECT * FROM player_stats WHERE player_name = ?", (player_name,))
+        row = cursor.fetchone()
+        if row:
+            data = dict(row)
+            data["stats"] = json.loads(data["stats_json"])
+            return data
+        return None
+
+
+def delete_player(name: str) -> bool:
+    """Delete a player and all associated data."""
+    name = _sanitize_name(name)
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("DELETE FROM players WHERE name = ?", (name,))
+        conn.execute("DELETE FROM personal_bests WHERE player_name = ?", (name,))
+        conn.execute("DELETE FROM player_stats WHERE player_name = ?", (name,))
+        conn.commit()
+    return True
+
+
+def get_leaderboard(metric: str = "highest_avg", limit: int = 10) -> List[Dict]:
+    """Get leaderboard for a specific metric."""
+    valid_metrics = ["highest_avg", "best_checkout", "most_180s", "highest_throw", "total_games", "total_wins"]
+    if metric not in valid_metrics:
+        metric = "highest_avg"
+
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.execute(f"""
+            SELECT player_name, {metric}, total_games, total_wins
+            FROM personal_bests
+            ORDER BY {metric} DESC
+            LIMIT ?
+        """, (limit,))
+        return [dict(row) for row in cursor.fetchall()]

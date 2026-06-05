@@ -1,59 +1,50 @@
 """
-Dart Game Pro v2.2 — Core package with 189 features
+Dart Game Pro v2.4 — Core Package
 """
-
-__version__ = "2.3.0"
 
 from .engine import DartGameEngine
 from .player import Player
 from .game_state import GameState, InOutRule, MatchFormat
 from .checkout import get_checkout, get_best_checkout, is_checkable_score
 from .dartbot import DartBot
-from .database import init_db, save_player, get_all_players, get_recent_games
-from .database_v2 import init_db_v2, get_or_create_elo, update_elo, get_or_create_career, update_career, record_login, get_anniversaries, add_equipment, get_equipment
 from .achievements import AchievementEngine
-from .extensions import (
-    get_checkout_stats_by_range, get_segment_heatmap, get_30day_trend,
-    get_consistency_rating, get_ai_coach_recommendations, generate_training_plan,
-    TeamRoundTheClock, BaseballDarts, GotchaGame,
-    export_stats_csv, export_game_history_csv, generate_match_report,
-    get_tv_scoreboard, generate_share_text, generate_stats_card,
-    TournamentEngine, BounceOutTracker,
-)
-from .gamemodes import (
-    CountUpGame, BermudaGame, JDCChallenge, Practice4160,
-    TacticCricket, RandomCricket, HammerCricket,
-    EliminatorGame, RoadrunnerGame, Escalator20Game, CricketCountUp,
-)
+from .constants import ALL_MODES, MODE_CATEGORIES, DARTBOT_LEVELS
 from .systems import (
-    VoiceRecognition, SmartBot, ProSimulation, PRO_PLAYERS, CareerMode,
-    EloSystem, SkillLevelSystem, PatternDetector, CommentaryEngine,
-    AIMatchReporter, OnlineMatch, LobbySystem, DartsLiveFeatures,
-    SocialSharing, ThemeSystem, VirtualDartboard, SaveResumeManager,
-    GradedLeague, NAME_DATABASE,
+    VoiceRecognition, SmartBot, ProSimulation, CareerMode,
+    EloSystem, PatternDetector, CommentaryEngine, AIMatchReporter,
+    OnlineMatch, LobbySystem, DartsLiveFeatures, SocialSharing,
+    ThemeSystem, VirtualDartboard, SaveResumeManager, GradedLeague,
 )
-from .constants import DARTBOT_LEVELS, X01_MODES, QUICK_SCORES
+from .extensions import (
+    BounceOutTracker, BaseballDarts, GotchaGame, TeamRoundTheClock,
+)
+from .utils import parse_dart_value, validate_dart_throw, is_valid_dart_score, is_valid_finish
+from .database import (
+    init_db, save_player, get_player, get_all_players,
+    save_game, get_games, get_player_games,
+    update_personal_best, get_personal_best,
+    save_player_stats, get_player_stats,
+    get_leaderboard, delete_player,
+)
+from .database_v2 import (
+    init_db_v2, save_player_v2, get_player_v2,
+    save_equipment, get_equipment,
+    save_match_history, get_match_history,
+    record_login, get_login_streak,
+    save_challenge, get_challenges,
+    save_analytics, get_analytics,
+)
 
+__version__ = "2.4.0"
 __all__ = [
     "DartGameEngine", "Player", "GameState", "InOutRule", "MatchFormat",
     "get_checkout", "get_best_checkout", "is_checkable_score",
-    "DartBot", "init_db", "save_player", "get_all_players", "get_recent_games",
-    "init_db_v2", "get_or_create_elo", "update_elo", "get_or_create_career", "update_career",
-    "record_login", "get_anniversaries", "add_equipment", "get_equipment",
-    "AchievementEngine",
-    "get_checkout_stats_by_range", "get_segment_heatmap", "get_30day_trend",
-    "get_consistency_rating", "get_ai_coach_recommendations", "generate_training_plan",
-    "TeamRoundTheClock", "BaseballDarts", "GotchaGame",
-    "export_stats_csv", "export_game_history_csv", "generate_match_report",
-    "get_tv_scoreboard", "generate_share_text", "generate_stats_card",
-    "TournamentEngine", "BounceOutTracker",
-    "CountUpGame", "BermudaGame", "JDCChallenge", "Practice4160",
-    "TacticCricket", "RandomCricket", "HammerCricket",
-    "EliminatorGame", "RoadrunnerGame", "Escalator20Game", "CricketCountUp",
-    "VoiceRecognition", "SmartBot", "ProSimulation", "PRO_PLAYERS", "CareerMode",
-    "EloSystem", "SkillLevelSystem", "PatternDetector", "CommentaryEngine",
-    "AIMatchReporter", "OnlineMatch", "LobbySystem", "DartsLiveFeatures",
-    "SocialSharing", "ThemeSystem", "VirtualDartboard", "SaveResumeManager",
-    "GradedLeague", "NAME_DATABASE",
-    "DARTBOT_LEVELS", "X01_MODES", "QUICK_SCORES", "__version__",
+    "DartBot", "AchievementEngine",
+    "ALL_MODES", "MODE_CATEGORIES", "DARTBOT_LEVELS",
+    "VoiceRecognition", "SmartBot", "ProSimulation", "CareerMode",
+    "EloSystem", "PatternDetector", "CommentaryEngine", "AIMatchReporter",
+    "OnlineMatch", "LobbySystem", "DartsLiveFeatures", "SocialSharing",
+    "ThemeSystem", "VirtualDartboard", "SaveResumeManager", "GradedLeague",
+    "BounceOutTracker", "BaseballDarts", "GotchaGame", "TeamRoundTheClock",
+    "parse_dart_value", "validate_dart_throw", "is_valid_dart_score", "is_valid_finish",
 ]
