@@ -26,6 +26,7 @@ from .gamemodes import (
 from .tactics_joker import TacticsJokerGame, TacticsJokerBuilder, PRESET_CLASSIC
 from .party_games import KillerGame, DartsGolf, TicTacToeDarts, ShanghaiChampionship
 from .practice_drills import Bob27, Game121, HalveIt
+from .tournament import TournamentManager
 from .extensions import (
     BaseballDarts, GotchaGame, TeamRoundTheClock,
 )
@@ -86,6 +87,7 @@ class DartGameEngine:
         self.state.handicaps = handicaps or {}
         self.state.bot_enabled = bot_enabled
         self.state.bot_difficulty = bot_difficulty
+        self.tournament_manager = TournamentManager()
 
         # Configure match
         self._configure_match()
