@@ -1,16 +1,3 @@
-    st.subheader("🎮 Quick Matchmaking")
-    host = st.text_input("Your Name", value=st.session_state.get("last_player", "Player"))
-    omode = st.selectbox("Mode", ["501", "301", "701", "Cricket"])
-
-    # Simple average input for skill matching
-    player_avg = st.slider("Your Average (for matchmaking)", 20, 120, 55, step=5)
-
-    if st.button("🚀 Quick Match (Skill-based)", type="primary", use_container_width=True):
-        code = st.session_state.lobby.quick_match(host, omode, player_avg=player_avg)
-        st.session_state.current_lobby_code = code
-        st.success(f"Matched! Lobby: **{code}**")
-        st.rerun()
-
     # Show current lobby with auto-refresh feel
     if st.session_state.get("current_lobby_code"):
         st.divider()
@@ -26,8 +13,22 @@
             st.write(f"**Host:** {info['host']} | **Mode:** {info['mode']}")
             st.write(f"**Players:** {len(info['players'])}/{info['max_players']}")
 
+            # Show players in lobby
+            if info.get('players'):
+                st.write("**Players in lobby:**")
+                for p in info['players']:
+                    st.write(f"- {p}")
+
             if len(info['players']) >= 2:
-                st.success("🎯 Lobby is ready! You can start playing.")
+                st.success("🎯 Ready to play!")
+
+                if st.button("▶️ Start Game from Lobby", type="primary", use_container_width=True):
+                    # Create game from lobby players
+                    pdata = [{"name": p} for p in info['players']]
+                    start_game(pdata, info['mode'], "single_game", False, 5, "standard", False, False)
+                    # Clear lobby after starting game
+                    del st.session_state.current_lobby_code
+                    st.rerun()
 
             colA, colB = st.columns(2)
             with colA:
@@ -42,15 +43,3 @@
             if st.button("Clear"):
                 del st.session_state.current_lobby_code
                 st.rerun()
-
-    st.divider()
-    st.subheader("🔗 Join by Code")
-    jcode = st.text_input("Enter Lobby Code")
-    jname = st.text_input("Your Name", value=host, key="join_name2")
-    if st.button("Join Lobby"):
-        if st.session_state.lobby.join_by_code(jcode, jname):
-            st.session_state.current_lobby_code = jcode.upper()
-            st.success(f"Joined {jcode.upper()}!")
-            st.rerun()
-        else:
-            st.error("Invalid code or lobby is full")
