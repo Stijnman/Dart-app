@@ -296,6 +296,30 @@ opponent_remaining = st.session_state.engine.opponent.remaining if hasattr(...) 
 
 # Check if we're in a pressure situation
 is_pressure = ppi.throws and (len(ppi.throws) > 3)  # simplistic
+"""
+
+# v3.1 Advanced Weakness Analysis (P1-1)
+def analyze_weaknesses(throws: List[Dict], history: List[Dict]) -> Dict[str, Any]:
+    """Advanced per-segment weakness + pressure detection for coach.
+    Returns recommendations and auto-drills.
+    """
+    if not throws:
+        return {"message": "Throw more darts for analysis."}
+    segments = {}
+    for t in throws:
+        seg = t.get("segment", t.get("score", 20) // 3 or 20)  # rough
+        segments[seg] = segments.get(seg, 0) + 1
+    sorted_segs = sorted(segments.items(), key=lambda x: x[1])
+    weak = [s for s, c in sorted_segs[:3]]
+    pressure_throws = [h for h in history if h.get("is_pressure")]
+    pressure_acc = sum(h.get("score", 0) for h in pressure_throws) / max(len(pressure_throws), 1) if pressure_throws else 0
+    rec = {
+        "weak_segments": weak,
+        "pressure_accuracy": round(pressure_acc, 1),
+        "recommended_drills": [f"Practice {w} x50" for w in weak] + (["Pressure checkout drills"] if pressure_acc < 50 else []),
+        "ai_tip": "Focus on your weak segments in pressure situations for biggest gains."
+    }
+    return rec
 
 suggestion = coach.get_suggestion(
     remaining=remaining,
