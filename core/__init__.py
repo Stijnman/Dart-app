@@ -1,5 +1,6 @@
 """
-Dart Game Pro v2.4 — Core Package
+Dart Game Pro v3.1 — Core Package
+Real-time multiplayer, ELO, custom, analytics, coach, PWA foundation.
 """
 
 from .engine import DartGameEngine

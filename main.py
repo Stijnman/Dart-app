@@ -1,6 +1,6 @@
 """
-Dart Game Pro v3.0 — Main Entry Point
-Major release: Sublime UI overhaul, full Custom Game Mode system, rich Analytics, Practice Drills, multiplayer lobby, achievements, exports & more.
+Dart Game Pro v3.1 — Main Entry Point
+Real-time WS multiplayer + ELO + custom online, PWA/mobile, AI coach, streaming. Sublime v3.0 base preserved + enhanced.
 """
 
 import sys

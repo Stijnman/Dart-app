@@ -1,6 +1,6 @@
 """
-Dart Game Pro v3.0 - Main Streamlit Application
-Sublime modern UI, full Custom Game Mode wizard (Surprise Me, preview, stats, export, edit+), rich Analytics (first9, checkout %, heatmaps, exports), Practice Drills, Lobby, Achievements, Handicaps, Leaderboards & more.
+Dart Game Pro v3.1 - Main Streamlit Application
+Real-time Online multiplayer (WS client), PWA/mobile, AI coach weaknesses, streaming support. Full v3.0 Custom + Analytics + Practice intact + polished.
 """
 
 import streamlit as st
