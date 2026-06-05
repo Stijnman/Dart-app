@@ -1,45 +1,33 @@
-    # Show current lobby with auto-refresh feel
+    # === LOBBY CHAT SECTION ===
     if st.session_state.get("current_lobby_code"):
         st.divider()
-        st.subheader("📋 Your Lobby")
+        st.subheader("💬 Lobby Chat")
 
-        info = st.session_state.lobby.get_lobby_info(st.session_state.current_lobby_code)
+        lobby_code = st.session_state.current_lobby_code
+        lobby = st.session_state.lobby.lobbies.get(
+            st.session_state.lobby.join_codes.get(lobby_code)
+        )
 
-        if info:
-            c1, c2 = st.columns(2)
-            c1.metric("Lobby Code", info['code'])
-            c2.metric("Status", info['status'].upper())
+        if lobby:
+            # Display chat history
+            chat_container = st.container(height=250)
+            with chat_container:
+                for msg in lobby.get_chat_history():
+                    timestamp = msg.get('time', '')[:16].replace('T', ' ')
+                    st.markdown(f"**{msg['from']}** [{timestamp}]: {msg['msg']}")
 
-            st.write(f"**Host:** {info['host']} | **Mode:** {info['mode']}")
-            st.write(f"**Players:** {len(info['players'])}/{info['max_players']}")
+            # Chat input
+            chat_msg = st.text_input("Type a message", key="lobby_chat_input", placeholder="Say something...")
+            col_send, col_clear = st.columns([3, 1])
 
-            # Show players in lobby
-            if info.get('players'):
-                st.write("**Players in lobby:**")
-                for p in info['players']:
-                    st.write(f"- {p}")
-
-            if len(info['players']) >= 2:
-                st.success("🎯 Ready to play!")
-
-                if st.button("▶️ Start Game from Lobby", type="primary", use_container_width=True):
-                    # Create game from lobby players
-                    pdata = [{"name": p} for p in info['players']]
-                    start_game(pdata, info['mode'], "single_game", False, 5, "standard", False, False)
-                    # Clear lobby after starting game
-                    del st.session_state.current_lobby_code
+            with col_send:
+                if st.button("Send", key="send_chat") and chat_msg.strip():
+                    lobby.send_chat(host, chat_msg.strip())
                     st.rerun()
 
-            colA, colB = st.columns(2)
-            with colA:
-                if st.button("🔄 Refresh Status"):
-                    st.rerun()
-            with colB:
-                if st.button("❌ Leave Lobby"):
-                    del st.session_state.current_lobby_code
+            with col_clear:
+                if st.button("🗑️ Clear", key="clear_chat"):
+                    lobby.clear_chat()
                     st.rerun()
         else:
-            st.warning("This lobby no longer exists.")
-            if st.button("Clear"):
-                del st.session_state.current_lobby_code
-                st.rerun()
+            st.warning("Lobby not found.")
