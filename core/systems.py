@@ -608,43 +608,28 @@ class AIMatchReporter:
         mode = stats.get("mode", "Unknown")
         total_turns = stats.get("total_turns", 0)
 
-        report = f"📊 MATCH REPORT: {mode.upper()}
-"
-        report += f"{'=' * 40}
-"
-        report += f"Winner: {winner}
-"
-        report += f"Total Turns: {total_turns}
-
-"
+        report = f"📊 MATCH REPORT: {mode.upper()}\n"
+        report += f"{'=' * 40}\n"
+        report += f"Winner: {winner}\n"
+        report += f"Total Turns: {total_turns}\n\n"
 
         for p in players:
-            report += f"👤 {p['name']}:
-"
-            report += f"   Average: {p.get('average', 0)}
-"
-            report += f"   180s: {p.get('one_eighties', 0)}
-"
-            report += f"   100+: {p.get('hundreds', 0)}
-"
-            report += f"   140+: {p.get('ton_forties', 0)}
-"
-            report += f"   Checkout Rate: {p.get('checkout_rate', 0)}%
-"
-            report += f"   Highest Checkout: {p.get('highest_checkout', 0)}
-
-"
+            report += f"👤 {p['name']}:\n"
+            report += f"   Average: {p.get('average', 0)}\n"
+            report += f"   180s: {p.get('one_eighties', 0)}\n"
+            report += f"   100+: {p.get('hundreds', 0)}\n"
+            report += f"   140+: {p.get('ton_forties', 0)}\n"
+            report += f"   Checkout Rate: {p.get('checkout_rate', 0)}%\n"
+            report += f"   Highest Checkout: {p.get('highest_checkout', 0)}\n\n"
 
         # Analysis
         best_avg = max(p.get('average', 0) for p in players)
         best_player = next(p['name'] for p in players if p.get('average', 0) == best_avg)
-        report += f"🏆 Best Average: {best_player} with {best_avg}
-"
+        report += f"🏆 Best Average: {best_player} with {best_avg}\n"
 
         total_180s = sum(p.get('one_eighties', 0) for p in players)
         if total_180s > 0:
-            report += f"🔥 Total 180s in match: {total_180s}
-"
+            report += f"🔥 Total 180s in match: {total_180s}\n"
 
         return report
 
@@ -799,15 +784,11 @@ class SocialSharing:
         avg = stats.get("average", 0)
         one_eighties = stats.get("one_eighties", 0)
 
-        text = f"🎯 Just played {mode} on Dart Game Pro!
-"
-        text += f"Winner: {winner}
-"
-        text += f"Average: {avg}
-"
+        text = f"🎯 Just played {mode} on Dart Game Pro!\n"
+        text += f"Winner: {winner}\n"
+        text += f"Average: {avg}\n"
         if one_eighties > 0:
-            text += f"🔥 {one_eighties}x 180!
-"
+            text += f"🔥 {one_eighties}x 180!\n"
         text += "#DartsGamePro #Darts"
         return text
 

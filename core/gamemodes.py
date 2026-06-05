@@ -671,12 +671,10 @@ class RoadrunnerGame:
             self.caught = True
             self._pro_won = True
             self.winner = None  # No player winner
-            msg += "
-🔴 CAUGHT! The Pro caught you! Game Over!"
+            msg += "\n🔴 CAUGHT! The Pro caught you! Game Over!"
         elif self.round_num >= self.max_rounds:
             self.winner = self.player
-            msg += f"
-🏆 You survived all {self.max_rounds} rounds! You win!"
+            msg += f"\n🏆 You survived all {self.max_rounds} rounds! You win!"
         else:
             rounds_left = self.max_rounds - self.round_num
             msg += f" | {rounds_left} rounds to go..."
