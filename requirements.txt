@@ -14,6 +14,7 @@ python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
 redis>=5.0.0
 websockets>=12.0
+requests>=2.31.0
 # Optional for full voice (mic): SpeechRecognition pyaudio  (platform specific)
 # For tests: pytest
 # For deployment: gunicorn, docker

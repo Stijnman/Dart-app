@@ -1,5 +1,7 @@
 # Dart Game Pro v3.1 Server Deployment
 
+**Production-ready FastAPI backend for real-time multiplayer (ELO, custom modes, history, Redis-ready). Works seamlessly with the Streamlit Online tab.**
+
 ## Run locally
 ```bash
 pip install -r requirements.txt

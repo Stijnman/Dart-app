@@ -9,14 +9,15 @@ import os
 import json
 import asyncio
 import logging
+import uuid
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field, asdict
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, status
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, status, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.responses import HTMLResponse
 import uvicorn
 
 # Optional Redis
@@ -26,10 +27,6 @@ try:
 except ImportError:
     REDIS_AVAILABLE = False
 
-# JWT
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-
 # Core integration
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -37,12 +34,38 @@ from core.engine import DartGameEngine
 from core.player import Player
 from core.constants import ALL_MODES
 
-# Config
-SECRET_KEY = os.getenv("SECRET_KEY", "your-super-secret-key-change-in-prod")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
+# v3.1 shared models + auth (prevents cycles)
+from core.server.models import (
+    Token, User, MatchCreate, ThrowEvent, CommandEvent,
+    create_access_token, get_current_user, DEMO_USERS,
+    SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, RATE_LIMIT_PER_MIN,
+)
+
+# v3.1 Use pure core multiplayer manager (ELO + engine + persist inside)
+from core.multiplayer import (
+    manager as mp_manager,
+    GameState as MPGameState,
+    HAS_ELO,
+    HAS_DB_V2,
+)
+# Also import handlers for message dispatch
+try:
+    from core.server.handlers import handle_ws_message, ws_auth_and_accept, create_match_handler
+    HAS_HANDLERS = True
+except Exception as _imp_e:
+    HAS_HANDLERS = False
+    handle_ws_message = None
+    ws_auth_and_accept = None
+    create_match_handler = None
+
+import json as _json  # fallback
+from pathlib import Path
+DATA_DIR = Path("data")
+DATA_DIR.mkdir(exist_ok=True)
+ONLINE_HISTORY_PATH = DATA_DIR / "online_match_history.json"
+
+# Config for redis etc (models has the common)
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-RATE_LIMIT_PER_MIN = 60  # per user
 
 app = FastAPI(title="Dart Game Pro Multiplayer API", version="3.1.0")
 app.add_middleware(
@@ -53,62 +76,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-security = HTTPBearer()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# --- Models ---
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class User(BaseModel):
-    username: str
-
-class MatchCreate(BaseModel):
-    mode: str = "501"
-    players: List[str]
-    out_rule: str = "double"
-
-class ThrowEvent(BaseModel):
-    match_id: str
-    player: str
-    darts: List[int]
-
-class CommandEvent(BaseModel):
-    match_id: str
-    player: str
-    command: str  # "undo", "next", etc.
-
-# --- Auth ---
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    token = credentials.credentials
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        return User(username=username)
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-# Simple in-memory users for demo (replace with DB)
-fake_users_db = {"demo": {"username": "demo", "hashed_password": pwd_context.hash("demo123")}}
-
+# --- Auth endpoint (uses models helpers) ---
 @app.post("/token", response_model=Token)
 async def login(form_data: dict):  # In real: use OAuth2PasswordRequestForm
     username = form_data.get("username")
     password = form_data.get("password")
-    user = fake_users_db.get(username)
-    if not user or not pwd_context.verify(password, user["hashed_password"]):
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    access_token = create_access_token(data={"sub": username})
-    return {"access_token": access_token, "token_type": "bearer"}
+    if username in DEMO_USERS and DEMO_USERS[username] == password:
+        access_token = create_access_token(data={"sub": username})
+        return {"access_token": access_token, "token_type": "bearer"}
+    raise HTTPException(status_code=400, detail="Incorrect username or password (demo: demo/demo123)")
 
 # --- Rate Limiter (simple in-memory) ---
 rate_limits: Dict[str, List[datetime]] = {}
@@ -122,169 +98,167 @@ async def check_rate_limit(user: User):
     user_limits.append(now)
     rate_limits[user.username] = user_limits
 
-# --- Game Sync Manager ---
-@dataclass
-class GameState:
-    match_id: str
-    mode: str
-    players: List[str]
-    engine: Optional[DartGameEngine] = None
-    connected_clients: Dict[str, WebSocket] = field(default_factory=dict)
-    last_activity: datetime = field(default_factory=datetime.utcnow)
+# --- Delegation to pure core.multiplayer ---
+# Keep 'manager' and 'GameState' names for backward compat in this module / tests
+GameState = MPGameState
+manager = mp_manager  # the singleton from core.multiplayer (has .games, .elo, create_game etc)
 
-class GameSyncManager:
-    def __init__(self):
-        self.games: Dict[str, GameState] = {}
-        self.redis: Optional[redis.Redis] = None
-        if REDIS_AVAILABLE:
-            try:
-                self.redis = redis.from_url(REDIS_URL, decode_responses=True)
-            except Exception as e:
-                logging.warning(f"Redis unavailable: {e}")
+# Optional Redis setup on the manager (pub/sub)
+if REDIS_AVAILABLE and not getattr(manager, 'redis', None):
+    try:
+        manager.redis = redis.from_url(REDIS_URL, decode_responses=True)
+    except Exception as e:
+        logging.warning(f"Redis unavailable for multiplayer: {e}")
 
-    async def create_game(self, match_id: str, mode: str, players: List[str], user: User) -> GameState:
-        if match_id in self.games:
-            return self.games[match_id]
-        p_objs = [Player(name) for name in players]
-        engine = DartGameEngine(mode=mode, players=p_objs)
-        state = GameState(match_id=match_id, mode=mode, players=players, engine=engine)
-        self.games[match_id] = state
-        await self._broadcast_state(match_id, {"type": "game_created", "match_id": match_id, "players": players})
-        return state
-
-    async def join_game(self, match_id: str, player_name: str, websocket: WebSocket):
-        if match_id not in self.games:
-            raise ValueError("Match not found")
-        state = self.games[match_id]
-        state.connected_clients[player_name] = websocket
-        await self._broadcast_state(match_id, {"type": "player_joined", "player": player_name})
-        return state
-
-    async def leave_game(self, match_id: str, player_name: str):
-        if match_id in self.games:
-            state = self.games[match_id]
-            if player_name in state.connected_clients:
-                del state.connected_clients[player_name]
-            await self._broadcast_state(match_id, {"type": "player_left", "player": player_name})
-            if not state.connected_clients:
-                # Cleanup after timeout in prod
-                del self.games[match_id]
-
-    async def process_throw(self, match_id: str, player: str, darts: List[int]):
-        if match_id not in self.games:
-            return
-        state = self.games[match_id]
-        if state.engine is None:
-            return
+async def _broadcast_state(match_id: str, message: dict):
+    """Local WS broadcast + optional Redis publish. Called from WS handlers."""
+    if match_id not in manager.games:
+        return
+    state = manager.games[match_id]
+    data = json.dumps(message)
+    for ws in list(getattr(state, 'connected_clients', {}).values()):
         try:
-            msg = state.engine.record_throw(darts)
-            state.last_activity = datetime.utcnow()
-            await self._broadcast_state(match_id, {
-                "type": "throw",
-                "player": player,
-                "darts": darts,
-                "message": msg,
-                "scores": {p.name: p.score for p in state.engine.players},
-                "winner": state.engine.state.winner,
-            })
-            # TODO: Update ELO if winner
-        except Exception as e:
-            await self._broadcast_state(match_id, {"type": "error", "message": str(e)})
+            await ws.send_text(data)
+        except Exception:
+            pass
+    if getattr(manager, 'redis', None):
+        try:
+            await manager.redis.publish(f"game:{match_id}", data)
+        except Exception:
+            pass
 
-    async def process_command(self, match_id: str, player: str, command: str):
-        if match_id not in self.games:
-            return
-        state = self.games[match_id]
-        if state.engine is None:
-            return
-        if command == "undo":
-            ok = state.engine.undo_last_throw()
-            await self._broadcast_state(match_id, {"type": "undo", "success": ok})
-        elif command == "next":
-            msg = state.engine.switch_player() if hasattr(state.engine, 'switch_player') else "Turn passed"
-            await self._broadcast_state(match_id, {"type": "next_player", "message": msg})
-
-    async def _broadcast_state(self, match_id: str, message: dict):
-        if match_id not in self.games:
-            return
-        state = self.games[match_id]
-        data = json.dumps(message)
-        # Local broadcast
-        for ws in list(state.connected_clients.values()):
-            try:
-                await ws.send_text(data)
-            except:
-                pass
-        # Redis pub/sub for multi-process
-        if self.redis:
-            await self.redis.publish(f"game:{match_id}", data)
-
-    async def get_state(self, match_id: str) -> Optional[dict]:
-        if match_id not in self.games:
-            return None
-        state = self.games[match_id]
-        if state.engine:
-            return {
-                "match_id": match_id,
-                "mode": state.mode,
-                "players": state.players,
-                "scores": {p.name: p.score for p in state.engine.players},
-                "winner": state.engine.state.winner,
-                "history": [asdict(h) for h in state.engine.state.history[-10:]],
-            }
-        return None
-
-manager = GameSyncManager()
-
-# --- WebSocket Endpoint ---
+# --- WebSocket Endpoint (production: delegates to mp + handlers) ---
 @app.websocket("/ws/{match_id}/{player_name}")
-async def websocket_endpoint(websocket: WebSocket, match_id: str, player_name: str, token: str = None):
-    # Simple token check (in prod use Depends in HTTP, pass via query for WS)
+async def websocket_endpoint(websocket: WebSocket, match_id: str, player_name: str, token: Optional[str] = Query(None)):
+    """Production WS with token auth, rate limit, real engine via core.multiplayer."""
     if token:
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            # validate user
-        except:
-            await websocket.close(code=1008)
+            jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        except Exception:
+            await websocket.close(code=1008, reason="Invalid or expired token")
             return
     await websocket.accept()
     try:
-        state = await manager.join_game(match_id, player_name, websocket)
-        # Send initial state
-        initial = await manager.get_state(match_id)
+        # join via mp_manager (sync under the hood)
+        state = manager.join(match_id, player_name, websocket)
+        # initial
+        initial = manager.get_state(match_id)
         if initial:
             await websocket.send_text(json.dumps({"type": "initial_state", **initial}))
         while True:
-            data = await websocket.receive_text()
-            event = json.loads(data)
-            await check_rate_limit(User(username=player_name))  # simplistic
-            if event.get("type") == "throw":
-                await manager.process_throw(match_id, player_name, event.get("darts", []))
-            elif event.get("type") == "command":
-                await manager.process_command(match_id, player_name, event.get("command", ""))
+            raw = await websocket.receive_text()
+            try:
+                await check_rate_limit(User(username=player_name))
+            except HTTPException as rate_err:
+                await websocket.send_text(json.dumps({"type": "error", "message": str(rate_err.detail)}))
+                continue
+            if HAS_HANDLERS and handle_ws_message:
+                await handle_ws_message(websocket, match_id, player_name, raw)
+            else:
+                # Fallback inline dispatch (uses mp_manager)
+                try:
+                    event = json.loads(raw)
+                except:
+                    await websocket.send_text(json.dumps({"type": "error", "message": "bad json"}))
+                    continue
+                et = event.get("type")
+                if et == "throw":
+                    res = manager.record_throw(match_id, player_name, event.get("darts", []))
+                    await _broadcast_state(match_id, res)
+                elif et == "command":
+                    res = manager.process_command(match_id, player_name, event.get("command", ""))
+                    await _broadcast_state(match_id, res)
+                elif et == "ping":
+                    await websocket.send_text(json.dumps({"type": "pong"}))
     except WebSocketDisconnect:
-        await manager.leave_game(match_id, player_name)
+        manager.leave(match_id, player_name)
     except Exception as e:
-        await websocket.send_text(json.dumps({"type": "error", "message": str(e)}))
-        await manager.leave_game(match_id, player_name)
+        try:
+            await websocket.send_text(json.dumps({"type": "error", "message": str(e)}))
+        except:
+            pass
+        manager.leave(match_id, player_name)
 
-# --- REST Endpoints for match creation etc. ---
+# --- REST Endpoints for match creation etc. (thin, delegate to mp_manager + handlers) ---
 @app.post("/matches")
 async def create_match(match: MatchCreate, user: User = Depends(get_current_user)):
-    match_id = f"match_{int(datetime.utcnow().timestamp())}"
-    await manager.create_game(match_id, match.mode, match.players, user)
-    return {"match_id": match_id, "join_code": match_id[-6:].upper()}
+    mid = "match_" + uuid.uuid4().hex[:10]
+    st = manager.create_game(mid, match.mode, match.players, custom=match.custom)
+    await _broadcast_state(mid, {"type": "game_created", "match_id": mid, "players": match.players})
+    return {"match_id": mid, "join_code": mid[-6:].upper(), "mode": st.mode}
+
+@app.post("/demo/matches")
+async def create_demo_match(match: MatchCreate):
+    """Public demo (no auth) for UI/curl tests. Supports custom modes."""
+    mid = "match_" + uuid.uuid4().hex[:10]
+    st = manager.create_game(mid, match.mode, match.players, custom=match.custom)
+    await _broadcast_state(mid, {"type": "game_created", "match_id": mid, "players": match.players})
+    return {"match_id": mid, "join_code": mid[-6:].upper(), "mode": getattr(st, 'mode', match.mode)}
 
 @app.get("/matches/{match_id}")
 async def get_match(match_id: str):
-    state = await manager.get_state(match_id)
-    if not state:
+    st = manager.get_state(match_id)
+    if not st:
         raise HTTPException(404, "Match not found")
-    return state
+    return st
 
 @app.get("/matches")
 async def list_open_matches():
-    return [m for m in manager.games.values() if len(m.connected_clients) < 4]  # simplistic
+    res = []
+    for mid, gs in manager.games.items():
+        if len(getattr(gs, 'connected_clients', {})) < 4:
+            res.append({"match_id": mid, "players": gs.players, "mode": gs.mode})
+    return res
+
+@app.get("/elo/standings")
+async def get_elo_standings():
+    if getattr(manager, 'elo', None):
+        return manager.elo.get_standings()
+    return []
+
+@app.get("/history/{player_name}")
+async def get_player_history(player_name: str, limit: int = 20):
+    if HAS_DB_V2:
+        try:
+            from core.database_v2 import get_match_history as _gmh
+            h = _gmh(1, limit=limit)
+            return [r for r in h if player_name.lower() in str(r).lower()]
+        except Exception:
+            pass
+    if ONLINE_HISTORY_PATH and ONLINE_HISTORY_PATH.exists():
+        try:
+            allh = _json.loads(ONLINE_HISTORY_PATH.read_text(encoding="utf-8") or "[]")
+            return [r for r in allh if player_name.lower() in str(r.get("players", [])).lower()][:limit]
+        except Exception:
+            pass
+    return []
+
+# --- Streaming / OBS overlay endpoints (P1-2) ---
+@app.get("/stream/{match_id}")
+async def stream_match(match_id: str):
+    """JSON feed for OBS browser source, web overlays, or external dashboards. Poll or use WS for live."""
+    st = manager.get_state(match_id)
+    if not st:
+        raise HTTPException(404, "Match not found")
+    # enrich for overlays
+    st["ts"] = datetime.utcnow().isoformat()
+    st["live"] = match_id in manager.games and len(getattr(manager.games[match_id], 'connected_clients', {})) > 0
+    return st
+
+@app.get("/overlays/obs/{match_id}", response_class=HTMLResponse)
+async def obs_overlay(match_id: str):
+    """Minimal HTML overlay for OBS. In real: use /stream json + JS poll or WS."""
+    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>Dart Overlay {match_id}</title>
+<style>body{{font-family:system-ui;margin:0;padding:12px;background:rgba(0,0,0,0.6);color:#fff}} .score{{font-size:28px}}</style>
+</head><body>
+<h3>🎯 Live — {match_id}</h3>
+<div id="s"></div>
+<script>
+async function poll(){{ try{{ const r=await fetch('/stream/{match_id}'); const j=await r.json(); document.getElementById('s').innerHTML = '<pre>'+JSON.stringify(j.scores||j,null,2)+'</pre>'; }}catch(e){{}} setTimeout(poll,800); }}
+poll();
+</script>
+</body></html>"""
+    return HTMLResponse(html)
 
 # For local dev
 if __name__ == "__main__":

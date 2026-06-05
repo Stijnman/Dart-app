@@ -330,10 +330,5 @@ suggestion = coach.get_suggestion(
 st.info(f"**Coach says:** Aim for **{suggestion.target}**")
 st.caption(suggestion.explanation)
 
-# After the leg ends:
-if leg_finished:
-    report = coach.get_post_leg_report(player_name="You")
-    st.subheader("Coach's Report")
-    st.json(report)
-    coach.reset()   # ready for next leg
-"""
+# (end of module; example usage shown in docstring at top of file and in UI integration)
+

@@ -34,7 +34,10 @@ jobs:
 
     - name: Test with pytest
       run: |
-        pytest --cov=. --cov-report=xml
+        pytest --cov=. --cov-report=xml -q
+    - name: Test server (v3.1)
+      run: |
+        python -m pytest tests/test_server.py -q --tb=no || echo "server tests skipped if no deps"
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3

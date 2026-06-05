@@ -1,17 +1,28 @@
-# 🎯 Dart Game Pro v3.0
+# 🎯 Dart Game Pro v3.1
 
-[![Version](https://img.shields.io/badge/version-3.0-blue)](https://github.com/Stijnman/Dart-app)
+[![Version](https://img.shields.io/badge/version-3.1.0-blue)](https://github.com/Stijnman/Dart-app)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.28+-red?logo=streamlit)](https://streamlit.io)
 [![Plotly](https://img.shields.io/badge/Plotly-5.15+-brightgreen)](https://plotly.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi)](https://fastapi.tiangolo.com)
+[![WebSocket](https://img.shields.io/badge/WebSocket-Real--time-green)](https://github.com/aaugustin/websockets)
 
-**The most comprehensive, sublime dart scoring & practice app.**
+**The most comprehensive, sublime dart scoring & practice app — now with real-time online multiplayer.**
 
-**v3.0** delivers a major leap: a fully-featured **Custom Game Mode system**, **sublime modern UI**, **deep Analytics**, **Practice Drills suite**, enhanced multiplayer/social features, and more — built with the latest popular tools (Streamlit, Plotly, pandas, pyttsx3). Focus on **added value** for players and creators.
+**v3.1** adds production WebSocket multiplayer (ELO, custom modes, history), full Online tab, PWA/mobile polish, AI weakness coach integration, streaming overlays API + OBS example. All on top of v3.0's flagship Custom + Analytics + Practice without any breaking changes. Local-first moat preserved while closing gaps vs lidarts/dartmania.
 
 ---
 
-## ✨ What's New in v3.0 — Major Additions
+## ✨ What's New in v3.1 — Major Additions (Autonomous Roadmap)
+- 🌐 **Real-time Multiplayer**: Full FastAPI WS server + threaded client in Streamlit Online tab. ELO, persistent history, custom mode support, live scores/turn/undo.
+- 📱 **Mobile + PWA**: Touch 48px, responsive CSS, manifest + sw in static/, install prompt, sidebar collapse.
+- 🧠 **AI Coach v3.1**: `analyze_weaknesses` (segments + pressure + auto-drills) live in Analytics; buttons feed Practice.
+- 📺 **Streaming**: `/stream/{id}` JSON + ready-to-use OBS HTML overlay at `/overlays/obs/{id}`.
+- ✅ 112 tests (incl. dedicated server tests), CI extended.
+
+See CHANGELOG.md and ALL_FEATURES.md for exhaustive matrix vs competitors.
+
+## ✨ What's New in v3.0 — Major Additions (Previous)
 
 **Sublime UI + Powerful New Systems** built with the latest & most popular tools: Streamlit (modern components, theming), Plotly (stunning interactive viz), pandas (exports), pyttsx3 (voice), rich custom mode engine, and deep integration with existing core (engine, DB, analytics modules).
 

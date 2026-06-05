@@ -1,0 +1,24 @@
+{
+  "name": "Dart Game Pro",
+  "short_name": "DartPro",
+  "description": "The most complete open-source darts platform: Custom modes, deep analytics, real-time online multiplayer, AI coach, practice drills.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#22c55e",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192x192.png?text=🎯",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/512x512.png?text=🎯",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "orientation": "portrait-primary",
+  "categories": ["games", "sports", "entertainment"],
+  "screenshots": []
+}

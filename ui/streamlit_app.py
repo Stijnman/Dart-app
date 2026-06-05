@@ -17,6 +17,17 @@ except ImportError:
     websockets = None
     asyncio = None
 
+# For real WS client in Streamlit (thread + queues) + REST to server
+import threading
+import queue
+try:
+    import requests
+    HAS_REQUESTS = True
+except Exception:
+    HAS_REQUESTS = False
+    requests = None  # type: ignore
+import json as _json  # used in online page
+
 # Core imports - prefer real
 try:
     from core.engine import DartGameEngine
@@ -49,7 +60,7 @@ except ImportError:
 try:
     from ui.v24_polished_tab import show_v24_polished_tab, initialize_v24_state
     from core.enhanced_voice_recognition import EnhancedVoiceRecognition
-    from core.coaching_mode import CoachingMode
+    from core.coaching_mode import CoachingMode, analyze_weaknesses
     from core.pressure_performance_index import PressurePerformanceIndex
     from core.advanced_heatmap import generate_advanced_heatmap, HAS_PLOTLY
 except Exception:
@@ -101,15 +112,28 @@ def apply_theme():
 
 /* v3.1 Mobile / PWA responsive (P0-3) */
 @media (max-width: 768px) {{
-    .stButton>button, .stTextInput>div>div>input {{ min-height: 44px; font-size: 16px; }}
-    .stMetric {{ font-size: 0.9em; }}
-    [data-testid="stSidebar"] {{ display: none; }} /* collapse on mobile, use top nav */
+    .stButton>button, .stTextInput>div>div>input, .stNumberInput input {{ min-height: 48px !important; font-size: 16px !important; }}
+    .stMetric {{ font-size: 0.92em; }}
+    [data-testid="stSidebar"] {{ display: none; }}
+    .stTabs [data-baseweb="tab-list"] {{ gap: 4px; }}
 }}
 .stAppViewContainer {{ padding-top: 0.5rem; }}
+/* Touch friendly everywhere */
+.stButton>button {{ min-height: 42px; }}
 </style>
 """, unsafe_allow_html=True)
     # Mobile PWA hints
-    st.set_page_config(layout="wide", initial_sidebar_state="collapsed")  # better for mobile
+    st.set_page_config(layout="wide", initial_sidebar_state="collapsed", page_title="Dart Game Pro v3.1", page_icon="🎯")
+    # PWA install banner (user can Add to Home Screen)
+    with st.expander("📱 Install as PWA / Mobile App (v3.1)", expanded=False):
+        st.markdown("""
+        1. Open in Chrome/Edge on phone.
+        2. Menu → "Add to Home screen" or "Install app".
+        3. Uses `static/manifest.json` + `service-worker.js` (register in production hosting).
+        4. Offline shell + touch targets 44px+.
+        See static/ for assets. Lighthouse target: 90+.
+        """)
+        st.caption("For full PWA on Streamlit Cloud/community: host behind nginx or use stlite / streamlit-pwa patterns.")
 
 def start_new_game(mode: str, names: List[str], custom_mode: Optional[CustomGameMode] = None, **engine_kwargs):
     players = [Player(n) for n in names if n.strip()]
@@ -682,6 +706,30 @@ def show_analytics_page():
                 if stats.get('checkout_attempts', 0) > 0:
                     st.progress(min(stats['checkout_rate']/100, 1.0))
 
+    # v3.1 AI Weakness Coach (P1-1) - per-segment + pressure + auto drills
+    st.subheader("🧠 AI Weakness Coach (analyze_weaknesses)")
+    if st.button("Run Weakness Analysis on Current Throws"):
+        # Collect throws from players or history
+        all_throws = []
+        hist = []
+        try:
+            for p in getattr(engine, "players", []):
+                if hasattr(p, "throws"):
+                    all_throws.extend([{"score": t, "segment": (t//20)*20 if isinstance(t, (int,float)) else 20} for t in getattr(p, "throws", [])])
+            if hasattr(engine, "state") and engine.state.history:
+                hist = [{"score": getattr(h, 'total', 0), "is_pressure": False} for h in engine.state.history]
+        except Exception:
+            pass
+        if not all_throws:
+            all_throws = [{"score": 20, "segment": 20}] * 5  # minimal demo
+        rec = analyze_weaknesses(all_throws, hist)
+        st.json(rec)
+        if rec.get("recommended_drills"):
+            for d in rec["recommended_drills"]:
+                if st.button(f"▶️ Start Drill: {d}", key=f"drill_{d}"):
+                    st.success(f"Drill queued: {d} — switch to Practice tab!")
+                    st.session_state.recommended_drill = d
+
     # Advanced Heatmap from v2.4
     st.subheader("Advanced Heatmaps & Analysis")
     if st.button("Generate Heatmap from Current Throws"):
@@ -830,66 +878,281 @@ def main():
     elif page == "Settings":
         show_settings_page()
 
+def _start_ws_listener(server_base: str, match_id: str, player_name: str, token: Optional[str] = None, recv_q: "queue.Queue" = None, send_q: "queue.Queue" = None):
+    """Background thread: connect, recv->recv_q, also check send_q and ws.send for outgoing from UI."""
+    import asyncio as _aio
+    if not WS_AVAILABLE or websockets is None:
+        if recv_q: recv_q.put({"type": "error", "message": "websockets lib missing"})
+        return
+    ws_url = f"{server_base}/{match_id}/{player_name}"
+    if token:
+        ws_url += f"?token={token}"
+
+    async def _run():
+        ws = None
+        try:
+            async with websockets.connect(ws_url) as ws:
+                if recv_q: recv_q.put({"type": "connected", "match_id": match_id, "player": player_name})
+                await ws.send(_json.dumps({"type": "ping", "ts": datetime.utcnow().isoformat()}))
+                async def _recv_loop():
+                    while True:
+                        try:
+                            msg = await ws.recv()
+                            data = _json.loads(msg)
+                            if recv_q: recv_q.put(data)
+                        except Exception as rx:
+                            if recv_q: recv_q.put({"type": "error", "message": f"recv: {rx}"})
+                            break
+                async def _send_loop():
+                    while True:
+                        try:
+                            # non block check send queue
+                            try:
+                                to_send = send_q.get_nowait() if send_q else None
+                            except Exception:
+                                to_send = None
+                            if to_send:
+                                await ws.send(_json.dumps(to_send) if isinstance(to_send, dict) else to_send)
+                            await _aio.sleep(0.05)
+                        except Exception as sx:
+                            if recv_q: recv_q.put({"type": "error", "message": f"send: {sx}"})
+                            break
+                # run both
+                await _aio.gather(_recv_loop(), _send_loop())
+        except Exception as ex:
+            if recv_q: recv_q.put({"type": "error", "message": f"WS connect failed: {ex}"})
+
+    try:
+        loop = _aio.new_event_loop()
+        _aio.set_event_loop(loop)
+        loop.run_until_complete(_run())
+    except Exception as e:
+        if recv_q: recv_q.put({"type": "error", "message": str(e)})
+
 def show_online_multiplayer_page():
-    st.header("🌐 Online Multiplayer (v3.1 WebSocket)")
-    st.caption("Connect to FastAPI server (run `python -m core.server.main` on port 8001). Demo uses localhost.")
+    st.header("🌐 Online Multiplayer — v3.1 Real-time WebSocket")
+    st.caption("Connects to FastAPI server (uvicorn core.server.main:app --port 8001). Supports ELO updates, custom modes, live state, history. Demo users: demo/demo123")
 
     if not WS_AVAILABLE:
-        st.warning("Install websockets: pip install websockets. Using simulated local lobby for now.")
-        # Fallback to old lobby
+        st.warning("websockets not installed — pip install websockets requests. Falling back to local LobbySystem simulation.")
         try:
             from core.systems import LobbySystem
             lobby = LobbySystem()
-            if st.button("Create Demo Lobby"):
-                m = lobby.create_lobby("You")
-                st.session_state.demo_lobby = m.to_dict() if hasattr(m, 'to_dict') else {"id": "demo"}
+            if st.button("Create Local Demo Lobby"):
+                m = lobby.create_lobby(st.session_state.get("player_names", ["You"])[0])
+                st.session_state.demo_lobby = getattr(m, "to_dict", lambda: {"id": "demo"})()
             if st.session_state.get("demo_lobby"):
                 st.json(st.session_state.demo_lobby)
-        except:
-            pass
+                st.info("Start a real server + refresh for full WS multiplayer.")
+        except Exception as e:
+            st.error(f"Lobby fallback unavailable: {e}")
         return
 
-    server_url = st.text_input("Server WS URL", "ws://localhost:8001/ws")
-    match_id = st.text_input("Match ID (or create via /matches API)", "demo-match-123")
-    player_name = st.text_input("Your Name", st.session_state.get("player_names", ["You"])[0])
+    # Controls
+    colA, colB = st.columns([2, 1])
+    with colA:
+        server_http = st.text_input("Server HTTP base", "http://localhost:8001", key="srv_http")
+        server_ws_base = st.text_input("Server WS base (no /ws/...)", "ws://localhost:8001/ws", key="srv_ws")
+    with colB:
+        st.markdown("**Quick start**")
+        st.caption("1. In terminal: `uvicorn core.server.main:app --port 8001 --reload`\n2. Come back, Create Demo or Join.")
 
-    if "ws_messages" not in st.session_state:
-        st.session_state.ws_messages = []
+    # Session state for live
+    if "online_state" not in st.session_state:
+        st.session_state.online_state = {"scores": {}, "winner": None, "current": None, "messages": []}
+    if "ws_recv_q" not in st.session_state or st.session_state.ws_recv_q is None:
+        st.session_state.ws_recv_q = queue.Queue()
+    if "ws_send_q" not in st.session_state or st.session_state.ws_send_q is None:
+        st.session_state.ws_send_q = queue.Queue()
+    if "ws_thread" not in st.session_state:
+        st.session_state.ws_thread = None
+    if "online_match_id" not in st.session_state:
+        st.session_state.online_match_id = ""
+    if "online_token" not in st.session_state:
+        st.session_state.online_token = None
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Connect & Join"):
-            st.session_state.ws_connected = True
-            # Note: Full async WS in Streamlit needs threading or asyncio.run in callback; simplified here
-            st.info("In production: use st.experimental_rerun loop or separate thread for WS. For demo, simulate messages.")
-            # Simulate connect
-            st.session_state.ws_messages.append(f"Connected to {match_id} as {player_name}")
-    with col2:
-        if st.button("Disconnect"):
-            st.session_state.ws_connected = False
-            st.session_state.ws_messages = []
-
-    if st.session_state.get("ws_connected"):
-        dart_input = st.text_input("Throw darts (comma sep, e.g. 20,20,20)", "20,20,20")
-        if st.button("Send Throw"):
+    # --- Create / Join controls ---
+    st.subheader("1. Create or Join a Match")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        p1 = st.text_input("Player 1", st.session_state.get("player_names", ["You"])[0], key="on_p1")
+        p2 = st.text_input("Player 2", "Opponent", key="on_p2")
+        mode = st.selectbox("Mode", ["501", "301", "701", "killer_party", "around_the_clock", "count_up"], key="on_mode")
+    with c2:
+        if st.button("🚀 Create Demo Match (public)", use_container_width=True):
             try:
-                darts = [int(x.strip()) for x in dart_input.split(",")]
-                # In real: await ws.send(json of throw)
-                st.session_state.ws_messages.append(f"You threw {darts}")
-                # Simulate response
-                st.session_state.ws_messages.append(f"Server: Throw processed, scores updated")
-            except:
-                st.error("Invalid darts")
-        cmd = st.selectbox("Command", ["undo", "next"])
-        if st.button("Send Command"):
-            st.session_state.ws_messages.append(f"Command: {cmd}")
-            st.session_state.ws_messages.append("Server: Command executed")
+                r = requests.post(f"{server_http}/demo/matches", json={"mode": mode, "players": [p1, p2]})
+                if r.ok:
+                    data = r.json()
+                    st.session_state.online_match_id = data.get("match_id", "")
+                    st.success(f"Created {data.get('match_id')} (join code {data.get('join_code')})")
+                    st.session_state.online_state["messages"].append(f"Match created: {data}")
+                else:
+                    st.error(f"Create failed: {r.text}")
+            except Exception as ex:
+                st.error(f"REST create error (is server running?): {ex}")
+        if st.button("🔑 Get Demo Token (demo/demo123)", use_container_width=True):
+            try:
+                r = requests.post(f"{server_http}/token", json={"username": "demo", "password": "demo123"})
+                if r.ok:
+                    tok = r.json().get("access_token")
+                    st.session_state.online_token = tok
+                    st.success("Token acquired (use for private matches)")
+                else:
+                    st.error(r.text)
+            except Exception as ex:
+                st.error(f"Login error: {ex}")
 
-        st.subheader("Live Messages")
-        for msg in st.session_state.ws_messages[-10:]:
-            st.text(msg)
+    with c3:
+        match_id = st.text_input("Match ID", value=st.session_state.get("online_match_id") or "match_...", key="on_mid")
+        player_name = st.text_input("Your player name (exact)", value=p1, key="on_pname")
+        use_token = st.checkbox("Use auth token", value=bool(st.session_state.get("online_token")), key="on_use_tok")
 
-        st.caption("Full integration: Connect to WS, send ThrowEvent/CommandEvent, receive state broadcasts. See core/server/main.py for backend.")
+        colj1, colj2 = st.columns(2)
+        with colj1:
+            if st.button("🔌 Connect / Join WS", use_container_width=True):
+                if not match_id or not player_name:
+                    st.error("Need match_id and your player name")
+                else:
+                    st.session_state.online_match_id = match_id
+                    rq = st.session_state.ws_recv_q
+                    sq = st.session_state.ws_send_q
+                    # drain old queues
+                    for qq in (rq, sq):
+                        while not qq.empty():
+                            try: qq.get_nowait()
+                            except: pass
+                    t = threading.Thread(
+                        target=_start_ws_listener,
+                        args=(server_ws_base, match_id, player_name, st.session_state.online_token if use_token else None, rq, sq),
+                        daemon=True
+                    )
+                    t.start()
+                    st.session_state.ws_thread = t
+                    st.session_state.online_state["messages"].append(f"Connecting as {player_name} to {match_id}...")
+                    st.rerun()
+        with colj2:
+            if st.button("✂️ Disconnect", use_container_width=True):
+                st.session_state.ws_thread = None
+                st.session_state.online_state["messages"].append("Disconnected.")
+                st.rerun()
+
+    # --- Live Play UI ---
+    st.subheader("2. Live Match")
+    if st.session_state.get("online_match_id"):
+        st.info(f"Match: **{st.session_state.online_match_id}** | You: **{player_name}**")
+
+    # Drain recv queue into state (on every render)
+    rq = st.session_state.get("ws_recv_q")
+    drained = 0
+    if rq:
+        while not rq.empty() and drained < 20:
+            try:
+                msg = rq.get_nowait()
+                drained += 1
+                if msg.get("type") == "connected":
+                    st.session_state.online_state["messages"].append(f"✅ {msg.get('player')} joined")
+                elif msg.get("type") in ("initial_state", "throw", "game_created", "elo_update", "player_joined"):
+                    if "scores" in msg:
+                        st.session_state.online_state["scores"] = msg["scores"]
+                    if "winner" in msg:
+                        st.session_state.online_state["winner"] = msg["winner"]
+                    if "current_player" in msg:
+                        st.session_state.online_state["current"] = msg.get("current_player")
+                    if msg.get("type") == "elo_update" and msg.get("standings"):
+                        st.session_state.online_state["standings"] = msg["standings"]
+                    st.session_state.online_state["messages"].append(str(msg)[:220])
+                elif msg.get("type") == "error":
+                    st.session_state.online_state["messages"].append(f"⚠️ {msg.get('message')}")
+                else:
+                    st.session_state.online_state["messages"].append(str(msg)[:180])
+            except Exception:
+                break
+
+    # Scores table
+    scores = st.session_state.online_state.get("scores", {})
+    if scores:
+        import pandas as _pd
+        df = _pd.DataFrame([{"Player": k, "Score": v} for k, v in scores.items()])
+        cur = st.session_state.online_state.get("current")
+        if cur:
+            df["Turn"] = df["Player"].apply(lambda x: "👉" if x == cur else "")
+        st.dataframe(df, use_container_width=True, hide_index=True)
+    else:
+        st.caption("No live scores yet — connect and throws will populate.")
+
+    winner = st.session_state.online_state.get("winner")
+    if winner:
+        st.success(f"🏆 Winner: {winner}  (ELO updated on server)")
+
+    # Throw UI
+    st.markdown("**Throw (3 darts)**")
+    t1, t2, t3, t4 = st.columns([1,1,1,1])
+    with t1:
+        d1 = st.number_input("Dart 1", 0, 20, 20, 1, key="on_d1")
+    with t2:
+        d2 = st.number_input("Dart 2", 0, 20, 20, 1, key="on_d2")
+    with t3:
+        d3 = st.number_input("Dart 3", 0, 20, 0, 1, key="on_d3")
+    with t4:
+        if st.button("🎯 Send Throw via WS", use_container_width=True, type="primary"):
+            if not st.session_state.get("online_match_id"):
+                st.error("No active match")
+            else:
+                darts = [int(d1), int(d2), int(d3)]
+                sq = st.session_state.get("ws_send_q")
+                if sq is not None:
+                    sq.put({"type": "throw", "darts": darts})
+                    st.session_state.online_state["messages"].append(f"→ Sent throw {darts} via WS")
+                else:
+                    st.session_state.online_state["messages"].append(f"(no send_q) would send {darts}")
+                st.rerun()
+
+    # Commands
+    cmd_col1, cmd_col2 = st.columns(2)
+    with cmd_col1:
+        if st.button("↩️ Undo Last"):
+            sq = st.session_state.get("ws_send_q")
+            if sq is not None:
+                sq.put({"type": "command", "command": "undo"})
+            st.session_state.online_state["messages"].append("Sent undo (background WS)")
+            st.rerun()
+    with cmd_col2:
+        if st.button("➡️ Next / Pass Turn"):
+            sq = st.session_state.get("ws_send_q")
+            if sq is not None:
+                sq.put({"type": "command", "command": "next"})
+            st.session_state.online_state["messages"].append("Sent next_player")
+            st.rerun()
+
+    # ELO + History sidebar-ish
+    st.subheader("3. Live ELO & Match History (from server)")
+    e1, e2 = st.columns(2)
+    with e1:
+        if st.button("📈 Fetch ELO Standings"):
+            try:
+                r = requests.get(f"{server_http}/elo/standings")
+                st.json(r.json() if r.ok else r.text)
+            except Exception as ex:
+                st.error(str(ex))
+    with e2:
+        if st.button("📜 My Recent Online History"):
+            try:
+                r = requests.get(f"{server_http}/history/{player_name or 'demo'}")
+                st.json(r.json() if r.ok else r.text)
+            except Exception as ex:
+                st.error(str(ex))
+
+    # Messages log
+    st.subheader("Live Log")
+    for m in st.session_state.online_state.get("messages", [])[-12:]:
+        st.text(m)
+
+    st.caption("Full multiplayer: real DartGameEngine on server, turn enforcement, ELO auto on win, DB/JSON history, Redis ready. For multi-client test use two tabs or wscat + Streamlit. See server_deployment.md and core/server/main.py.")
+
+    # Auto refresh hint
+    if st.button("🔄 Poll for updates (drain WS queue)"):
+        st.rerun()
 
 if __name__ == "__main__":
     main()

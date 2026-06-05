@@ -1,28 +1,24 @@
-# 🎯 Dart Game Pro v3.0 - Complete Feature List
+# 🎯 Dart Game Pro v3.1 - Complete Feature List
 
-[![Version](https://img.shields.io/badge/version-3.0-blue)](https://github.com/Stijnman/Dart-app)
+[![Version](https://img.shields.io/badge/version-3.1.0-blue)](https://github.com/Stijnman/Dart-app)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.28+-red?logo=streamlit)](https://streamlit.io)
 [![Plotly](https://img.shields.io/badge/Plotly-5.15+-brightgreen)](https://plotly.com)
+[![FastAPI + WS](https://img.shields.io/badge/FastAPI%20%2B%20WebSocket-v3.1-green)](https://github.com/Stijnman/Dart-app)
 
-**The most comprehensive, sublime dart scoring & practice app.**
+**The most comprehensive, sublime dart scoring & practice app — now with real-time multiplayer, PWA, AI coach & streaming.**
 
-<<<<<<< Updated upstream
+v3.1 autonomous delivery of P0-1 (WS/ELO/online), P0-3 (mobile/PWA), P1-1 (coach), P1-2 (streaming). 112 tests. Local moat (Custom + deep stats) intact.
 **v3.0** is a major release focused on **added value**, player creativity, deep insights, training tools, and a modern, beautiful UI experience. Built with the latest popular tools and practices (Streamlit modern components + theming/CSS, Plotly for stunning interactive visualizations, pandas for exports, pyttsx3 for voice, rich dataclasses for custom modes, persistent SQLite, etc.).
-=======
 **v3.0** is a major release focused on **added value**, player creativity, deep insights, training tools, and a modern, beautiful UI experience. Built with the latest popular tools and practices (Streamlit modern components + theming/CSS, Plotly for stunning interactive visualizations, pandas for exports, pyttsx3 for voice, rich Python dataclasses for custom modes, persistent SQLite, etc.).
->>>>>>> Stashed changes
 
 This document consolidates **ALL FEATURES**:
 - Core from previous versions + v2.4 "30 Cool Features" wishlist.
 - **New in v3.0** from community/competitor analysis (Statistics, Practice, Custom Modes, UI/UX, Multiplayer, AI, Data/History, Polish, etc.).
 - Status: Implemented, Enhanced, Partial, or Future (with notes on location in code).
 
-<<<<<<< Updated upstream
 Layout is clean, scannable, and "sublime" with emojis, tables, categorized sections, and highlights for new additions.
-=======
 Layout is clean, scannable, and "sublime" with emojis, tables, categorized sections, and highlights for new additions. Many competitor gaps from the deep analysis are now closed or significantly improved for a local/Streamlit experience.
->>>>>>> Stashed changes
 
 See [README.md](README.md) for sublime marketing-focused overview (added things, not bugfixes), [CHANGELOG.md](CHANGELOG.md) for release notes, and code for implementation.
 
@@ -85,11 +81,8 @@ Engine supports native + real sub-engines (many wired in v3.0 from CountUp fallb
 
 Complete end-to-end system in `custom_game_mode.py` + deep integration in `ui/streamlit_app.py` Play tab.
 
-<<<<<<< Updated upstream
 - **Wizard UI**: Select style (Scoring Race, Target Hunting, Survival, Chaos Mode), starting score, difficulty, special rules.
-=======
 - **Wizard UI**: Select style (Scoring Race, Target Hunting, Survival, Chaos Mode), starting score, difficulty (Easy/Normal/Hard/Brutal), special rules.
->>>>>>> Stashed changes
 - **Surprise Me**: One-click random wacky mode generator.
 - **Name Suggestions**: 5+ funny/wacky/punny options (improved generator with themes like "Insane Point Pandemonium", "Chillax Madhouse Mayhem", puns, "The Cursed...", "Darts Gone Wild").
 - **Beautiful Preview Cards** (sublime): Emoji + short flavor text/description, estimated playtime (e.g. ~7 min), tags (e.g. "survival", "high-score"), rules, multiplier, win condition — see *before* saving.
@@ -111,20 +104,14 @@ Complete end-to-end system in `custom_game_mode.py` + deep integration in `ui/st
   15. Funny loading/generation messages ("Generating pure chaos...", "Mayhem loading...").
   + Bonus: Delete, Play from saved list, auto-increment stats on use, integration with engine for real play + rules display.
 - **Actually Playable & Integrated**:
-<<<<<<< Updated upstream
   - Maps to real engine modes (e.g. Survival → killer_party with lives, Scoring Race → count_up with round_limit, Only Doubles → out_rule=double, Target Hunting → around_the_clock).
-=======
   - Maps to real engine modes (e.g. Survival → killer_party with lives/variant, Scoring Race → count_up with round_limit, Only Doubles → out_rule=double, Target Hunting → around_the_clock).
->>>>>>> Stashed changes
   - Rules shown live in Play (banner with name, win condition, specials, multiplier).
   - Stats tracked (play_count, best_score) via `play_custom_mode()`.
   - Handicaps, bot, voice, undo all work.
 - **Persistence & Sharing**: Saved to `data/custom_modes.json`. Export full JSON for import/share. Use in leaderboards, analytics, exports.
-<<<<<<< Updated upstream
 - **Stats & Gamification**: Per-custom leaderboards, best scores, recents. "🏆 Record my score as best" during play.
-=======
 - **Stats & Gamification**: Per-mode play counts, best scores, recents. "🏆 Record my score as best" during play.
->>>>>>> Stashed changes
 - **In UI**: Expander in Play (before/after game setup). "Use this Custom" auto-starts with mapping. Saved list with emoji, details, Play/Edit/Dup/Del buttons.
 
 **Addresses Competitor Gaps**: Advanced rule creation (specials + win conditions like best-of, highest after rounds, last man standing), customization depth (checkout rules via mapping, bull value, #darts implied), win conditions variety, per-mode stats/leaderboards, share/export (JSON), edit/duplicate, preview, tags, surprise/random, funny UX.
@@ -221,11 +208,8 @@ Overhauled `show_analytics_page()` + integrated in Play/v3.0 Advanced. Pulls fro
 - **Local Leaderboards**: Per mode/custom (play counts, best scores, rankings). Engine.get_leaderboard() + custom stats.
 - **Career / Tournaments / ELO**: CareerMode, ELO with dynamic K, tournaments (brackets, pro events), ladder league (tiers promo/demotion, seasonal).
 - **Challenges**: Daily/weekly, persistent in DB v2.
-<<<<<<< Updated upstream
 - **Achievements**: 35 milestones (100 games, 10 180s, 50 streak, etc.). Progress tracking, unlocks.
-=======
 - **Achievements Badges**: 35 milestones (100 games, 10 180s, 50 streak, etc.). Progress tracking, unlocks.
->>>>>>> Stashed changes
 - **Custom Mode Sharing**: Export JSON (full config + stats) for friends. Import support via wizard.
 - **Handicaps**: Per-player in setup for fair multiplayer.
 - **Team Modes**: Partial (Team ATC, team relay hints).
@@ -248,11 +232,8 @@ Overhauled `show_analytics_page()` + integrated in Play/v3.0 Advanced. Pulls fro
 - **Handicaps & Profiles**: In setup (number inputs + selectbox for active profile/stats). Fair play + tracking.
 - **Achievements Display**: Live in expander (unlocked icons, progress, "Check Achievements" button that runs check_game_end).
 - **Leaderboards & Stats**: Prominent in expanders (per mode/custom, with counts/bests).
-<<<<<<< Updated upstream
 - **Multiplayer UI**: Lobby create/join/list (codes, status, spectator hints).
-=======
 - **Multiplayer UI**: Lobby create/join/list (codes, status).
->>>>>>> Stashed changes
 - **Exports**: CSV (stats), JSON (customs/modes with full data) — download buttons everywhere.
 - **Onboarding + TV Mode**: Dedicated expanders/hints (cast to big screen, large fonts, new user guide in setup).
 - **Other Polish**:
@@ -260,19 +241,16 @@ Overhauled `show_analytics_page()` + integrated in Play/v3.0 Advanced. Pulls fro
   - Session summaries, recent history, "Play Again"/recents.
   - "Surprise Me" discovery.
   - Better error handling/toasts.
-<<<<<<< Updated upstream
   - Accessibility: High contrast themes, emojis, clear labels, keyboard-friendly Streamlit.
   - Custom mode preview cards (sublime UX).
   - TV-friendly (headless + hints).
 
 **Addresses Analysis**: Dark/light + custom themes (enhanced), voice input (polished), quick undo/redo (robust + UI), TV mode (hints), onboarding (guide), customizable dartboard/themes (full), accessibility (high contrast + more), gesture (web), offline (full local + DB), etc.
-=======
   - Accessibility: High contrast themes, emojis, clear labels.
   - Custom mode preview cards (sublime UX).
   - TV-friendly (headless + hints).
 
 **Addresses Analysis**: Dark/light + custom themes (enhanced), voice input (polished), quick undo/redo (robust + UI), TV mode (hints), onboarding (guide), customizable dartboard/themes (full), accessibility (high contrast + more), gesture (web), offline (full local + DB).
->>>>>>> Stashed changes
 
 **In UI**: Play (setup with new options, drills, custom wizard, lobby, voice, leaderboards), Analytics (exports, rich viz), v3.0 Advanced (themes, coach, etc.), Settings.
 
@@ -285,11 +263,8 @@ Overhauled `show_analytics_page()` + integrated in Play/v3.0 Advanced. Pulls fro
 ## 🏆 Achievements, Data & History
 
 - **35 Achievements**: Tracked with progress (not binary). check_game_end on game end (won, mode, stats like 180s, streaks, modes played). UI display + auto-unlock toasts.
-<<<<<<< Updated upstream
 - **Session / Match History**: Full per-throw/leg (engine.state.history as TurnRecord: darts, total, message, score_after, is_bust/checkout/180s). Undo stack (snapshots).
-=======
 - **Session / Match History**: Full per-throw/leg (engine.state.history as TurnRecord: darts, total, message, score_after, is_bust/checkout/180). Undo stack (snapshots).
->>>>>>> Stashed changes
 - **Per-Mode / Custom Stats**: Play counts, best scores, leaderboards (local).
 - **Personal Bests**: DB tracked (update on high scores/checkouts).
 - **Exports & Sharing**:

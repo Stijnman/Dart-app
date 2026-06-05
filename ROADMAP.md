@@ -1,13 +1,18 @@
-# 🎯 Dart Game Pro - Roadmap (Updated v3.0)
+# 🎯 Dart Game Pro - Roadmap (Updated v3.1)
 
-**Current Version**: v3.0 (Sublime UI + Custom Game Modes + Analytics + Practice)  
+**Current Version**: v3.1 (Real-time Multiplayer + PWA + AI Coach + Streaming)  
 **Repository**: https://github.com/Stijnman/Dart-app  
-**Last Updated**: 2026-06-05
+**Last Updated**: 2026-06-06
 
 ## Vision
-The most complete, intelligent, and engaging darts platform — from casual play to serious competitive training and community.
+The most complete, intelligent, and engaging darts platform — from casual play to serious competitive training and community. Local-first moat + social/mobile/streaming.
 
-## Current State (v3.0 – Just Shipped)
+## Current State (v3.1 – Just Shipped)
+- P0-1: Full WS multiplayer (core/multiplayer.py + server/*, ELO, persist, custom support, Online UI with real client)
+- P0-3: Mobile/PWA (static/ assets + CSS + banner)
+- P1-1: AI coach analyze_weaknesses integrated + drills
+- P1-2: Streaming /stream + /overlays/obs
+- 112 tests, server CI, no breaks on v3.0 features.
 
 ### ✅ Major Additions in v3.0 (Focus: Added Features, Sublime Experience)
 - **Custom Game Mode System (Flagship)**: Full wizard, Surprise Me, preview cards, 15+ polish features (edit/dup/del, stats, export JSON, better names, more rules, tags, est. time, funny msgs, etc.). Real playable integration + stats.

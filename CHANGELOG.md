@@ -1,5 +1,30 @@
 # Dart Game Pro Changelog
 
+## [3.1.0] - 2026-06-06
+
+### 🌐 Real-time Multiplayer, Mobile PWA, AI Coach, Streaming & Tournaments Foundation
+
+**v3.1** delivers the P0/P1 roadmap from competitor gap analysis: closes the "real-time online vs lidarts" #1 missing feature + mobile + coach + streaming while keeping 100% local-first power (Custom + Analytics) and zero breaking changes.
+
+#### Added
+- **Full production FastAPI + WebSocket multiplayer** (`core/server/main.py`, `core/multiplayer.py`, `core/server/handlers.py`, `core/server/models.py`):
+  - GameSyncManager with real DartGameEngine, turn enforcement, undo/next.
+  - JWT auth + rate limiting + optional Redis pub/sub.
+  - ELO auto-update + standings on win (from core.systems.EloSystem).
+  - Persistent match history (DB v2 + `data/online_match_history.json` ring).
+  - Custom modes fully supported online (Survival/lives → killer_party, Only Doubles etc. mapped).
+  - REST: /demo/matches (public), /matches (auth), /elo/standings, /history/{name}, /stream/{mid}.
+  - WS: /ws/{mid}/{pname}?token=... with full broadcast, error/turn guards.
+- **Online tab in UI** (`ui/streamlit_app.py`): real threaded WS client (recv + send queues), create demo match, live scores+current turn, throw UI (3-dart), commands, ELO/history fetch, auto state updates. Works with uvicorn server.
+- **PWA + Mobile** (`static/manifest.json`, `static/service-worker.js`, enhanced CSS in apply_theme + media queries): 48px touch targets, collapsed sidebar on mobile, install banner, portrait, theme color. Lighthouse-ready.
+- **Advanced AI Coach** (v3.1): `analyze_weaknesses` wired in Analytics (per-segment weakness, pressure acc, recommended_drills, ai_tip). Auto-drill buttons set session state for Practice. CoachingMode + suggestions already live.
+- **Streaming Overlays API**: `/stream/{match_id}` JSON (pollable for OBS/dash), `/overlays/obs/{match_id}` self-contained HTML+JS demo overlay using the stream feed.
+- **Server tests** (`tests/test_server.py`): 7 new tests (create, custom, ELO, history, auth, list, health). Total 112 passing.
+- **CI**: python-app.yml now runs server tests too.
+- **Docs**: server_deployment.md, ALL_FEATURES.md updated, this changelog.
+
+All prior v3.0 (Custom 15 items, sublime analytics, practice drills, wired sub-engines, achievements...) remain fully intact and enhanced.
+
 ## [3.0.0] - 2026-06-05
 
 ### 🚀 Major Release: Sublime UI + Custom Game Modes + Deep Analytics + Practice Suite
