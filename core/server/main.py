@@ -155,21 +155,24 @@ async def websocket_endpoint(websocket: WebSocket, match_id: str, player_name: s
             if HAS_HANDLERS and handle_ws_message:
                 await handle_ws_message(websocket, match_id, player_name, raw)
             else:
-                # Fallback inline dispatch (uses mp_manager)
+                # Fallback inline dispatch (uses mp_manager) — strict Pydantic parsing
                 try:
                     event = json.loads(raw)
-                except:
-                    await websocket.send_text(json.dumps({"type": "error", "message": "bad json"}))
-                    continue
-                et = event.get("type")
-                if et == "throw":
-                    res = manager.record_throw(match_id, player_name, event.get("darts", []))
-                    await _broadcast_state(match_id, res)
-                elif et == "command":
-                    res = manager.process_command(match_id, player_name, event.get("command", ""))
-                    await _broadcast_state(match_id, res)
-                elif et == "ping":
-                    await websocket.send_text(json.dumps({"type": "pong"}))
+                    et = event.get("type")
+                    if et == "throw":
+                        parsed = ThrowEvent(**event)
+                        res = manager.record_throw(match_id, player_name, parsed.darts)
+                        await _broadcast_state(match_id, res)
+                    elif et == "command":
+                        parsed = CommandEvent(**event)
+                        res = manager.process_command(match_id, player_name, parsed.command)
+                        await _broadcast_state(match_id, res)
+                    elif et == "ping":
+                        await websocket.send_text(json.dumps({"type": "pong"}))
+                    else:
+                        await websocket.send_text(json.dumps({"type": "error", "message": "unknown event type"}))
+                except Exception as parse_err:
+                    await websocket.send_text(json.dumps({"type": "error", "message": f"bad event: {parse_err}"}))
     except WebSocketDisconnect:
         manager.leave(match_id, player_name)
     except Exception as e:
@@ -232,6 +235,12 @@ async def get_player_history(player_name: str, limit: int = 20):
         except Exception:
             pass
     return []
+
+@app.post("/admin/cleanup")
+async def cleanup_stale():
+    """Demo/admin endpoint to force stale game cleanup (call from cron or healthcheck in prod)."""
+    removed = manager.cleanup_stale_games(max_idle_seconds=3600)
+    return {"removed": removed, "active_games": len(manager.games)}
 
 # --- Streaming / OBS overlay endpoints (P1-2) ---
 @app.get("/stream/{match_id}")

@@ -121,6 +121,18 @@ class GameSyncManager:
                 # keep a bit for reconnect; real cleanup via TTL job
                 pass
 
+    def cleanup_stale_games(self, max_idle_seconds: int = 3600):
+        """Remove games with no activity for too long (call periodically)."""
+        now = datetime.utcnow()
+        to_remove = []
+        for mid, state in list(self.games.items()):
+            idle = (now - state.last_activity).total_seconds()
+            if idle > max_idle_seconds and not state.connected_clients:
+                to_remove.append(mid)
+        for mid in to_remove:
+            del self.games[mid]
+        return len(to_remove)
+
     def record_throw(self, match_id: str, player: str, darts: List[int]) -> dict:
         if match_id not in self.games:
             return {"error": "no match"}
