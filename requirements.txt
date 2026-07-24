@@ -1,20 +1,20 @@
-streamlit>=1.58.0
-numpy>=2.4.6
-pandas>=3.0.3
+streamlit>=1.36.0
+numpy>=1.24
+pandas>=2.0
 plotly>=5.21.0
-pillow>=10.4.0
-python-dateutil>=2.9.0
-matplotlib>=3.10.9
-scipy>=1.14.0
+pillow>=10.0.0
+python-dateutil>=2.8.2
+matplotlib>=3.8
+scipy>=1.11
 pyttsx3>=2.90
 # v3.1+ server
-fastapi>=0.111.0
-uvicorn[standard]>=0.30.1
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
-redis>=5.0.4
+redis>=5.0.0
 websockets>=12.0
-requests>=2.32.3
+requests>=2.31.0
 httpx>=0.27.0
 # Optional for full voice (mic): SpeechRecognition pyaudio  (platform specific)
 # For tests: pytest
