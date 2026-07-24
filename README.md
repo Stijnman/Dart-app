@@ -1,6 +1,6 @@
 # 🎯 Dart Game Pro v3.1
 
-[![Version](https://img.shields.io/badge/version-3.1.0-blue)](https://github.com/Stijnman/Dart-app)
+[![Version](https://img.shields.io/badge/version-3.1.1-blue)](https://github.com/Stijnman/Dart-app)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.28+-red?logo=streamlit)](https://streamlit.io)
 [![Plotly](https://img.shields.io/badge/Plotly-5.15+-brightgreen)](https://plotly.com)
@@ -68,6 +68,16 @@ See CHANGELOG.md and ALL_FEATURES.md for exhaustive matrix vs competitors.
 - Focus on **player creation & fun**: Custom modes feel alive with names, emojis, previews, stats.
 
 See full details in [CHANGELOG.md](CHANGELOG.md), [ALL_FEATURES.md](ALL_FEATURES.md) (complete list of all features), and docs/.
+
+---
+
+## 🌐 Live Website
+
+The app is deployed as a permanent, free website on Streamlit Community Cloud — open it in any browser (desktop, iPad, or phone):
+
+> **https://stijnman-dart-app.streamlit.app** *(URL assigned at deployment; see repository About section for the current link)*
+
+On iPad/iPhone: open the link in Safari, tap **Share → Add to Home Screen** to install it as a full-screen PWA app.
 
 ---
 

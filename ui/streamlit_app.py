@@ -563,7 +563,8 @@ def show_play_page():
                 from core.achievements import AchievementEngine
                 eng = st.session_state.engine
                 if not hasattr(eng, "_ach_engine"):
-                    eng._ach_engine = AchievementEngine()
+                    _ach_player = (st.session_state.get("player_names") or ["You"])[0]
+                    eng._ach_engine = AchievementEngine(_ach_player)
                 achs = eng._ach_engine
                 if st.button("Check Achievements (after game)"):
                     stats = {"one_eighties": 2, "back_to_back_180": False}  # sim from history

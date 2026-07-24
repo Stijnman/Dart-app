@@ -321,14 +321,16 @@ def analyze_weaknesses(throws: List[Dict], history: List[Dict]) -> Dict[str, Any
     }
     return rec
 
-suggestion = coach.get_suggestion(
-    remaining=remaining,
-    opponent_remaining=opponent_remaining,
-    is_pressure=is_pressure
-)
-
-st.info(f"**Coach says:** Aim for **{suggestion.target}**")
-st.caption(suggestion.explanation)
+# Example usage (documentation only — not executed at import time):
+#
+# suggestion = coach.get_suggestion(
+#     remaining=remaining,
+#     opponent_remaining=opponent_remaining,
+#     is_pressure=is_pressure
+# )
+#
+# st.info(f"**Coach says:** Aim for **{suggestion.target}**")
+# st.caption(suggestion.explanation)
 
 # (end of module; example usage shown in docstring at top of file and in UI integration)
 

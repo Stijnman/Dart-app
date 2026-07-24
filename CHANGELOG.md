@@ -1,5 +1,17 @@
 # Dart Game Pro Changelog
 
+## [3.1.1] - 2026-07-25
+
+### 🐛 Bug Fixes & Deployment
+
+#### Fixed
+- **Critical: game start failure** (`name 'initialize_v24_state' is not defined`): stray module-level example code in `core/coaching_mode.py` (referencing undefined `coach`) crashed the import of all v2.4 modules, which was silently swallowed by the `try/except` in `ui/streamlit_app.py`. The example code is now properly commented out.
+- **Achievements panel error** (`AchievementEngine.__init__() missing 1 required positional argument: 'player_name'`): the UI now passes the current player's name when constructing `AchievementEngine`.
+
+#### Added
+- `.streamlit/config.toml` with headless server settings and a dark theme matching the app, for Streamlit Community Cloud deployment.
+- Live Website section in README with iPad/PWA install instructions.
+
 ## [3.1.0] - 2026-06-06
 
 ### 🌐 Real-time Multiplayer, Mobile PWA, AI Coach, Streaming & Tournaments Foundation
