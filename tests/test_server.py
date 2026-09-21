@@ -84,3 +84,47 @@ def test_list_matches():
 
 if __name__ == "__main__":
     pytest.main([__file__, "-q"]) 
+
+
+def test_overlay_escapes_match_identifier():
+    from urllib.parse import quote
+
+    malicious_id = "<img src=x onerror=alert(1)>"
+    response = _get_client().get("/overlays/obs/" + quote(malicious_id, safe=""))
+    assert response.status_code == 200
+    assert malicious_id not in response.text
+    assert "&lt;img src=x onerror=alert(1)&gt;" in response.text
+    assert 'fetch("/stream/%3Cimg%20src%3Dx%20onerror%3Dalert%281%29%3E")' in response.text
+    assert ".textContent =" in response.text
+    assert ".innerHTML" not in response.text
+
+
+def test_overlay_keeps_quotes_out_of_script_url():
+    from urllib.parse import quote
+
+    malicious_id = "');alert(1);//"
+    # Slashes are route delimiters; test the endpoint directly for this case.
+    import asyncio
+    from core.server.main import obs_overlay
+
+    response = asyncio.run(obs_overlay(malicious_id))
+    html = response.body.decode()
+    assert 'fetch("/stream/' + quote(malicious_id, safe="") + '")' in html
+    assert "fetch('/stream/" not in html
+
+
+def test_websocket_accepts_valid_token_and_rejects_invalid_token():
+    from starlette.websockets import WebSocketDisconnect
+    from core.server.models import create_access_token
+
+    client = _get_client()
+    mid = client.post("/demo/matches", json={"mode": "501", "players": ["demo", "other"]}).json()["match_id"]
+    token = create_access_token({"sub": "demo"})
+    with client.websocket_connect(f"/ws/{mid}/demo?token={token}") as ws:
+        assert ws.receive_json()["type"] == "initial_state"
+        ws.send_json({"type": "ping"})
+        assert ws.receive_json()["type"] == "pong"
+    with pytest.raises(WebSocketDisconnect) as exc:
+        with client.websocket_connect(f"/ws/{mid}/demo?token=invalid"):
+            pass
+    assert exc.value.code == 1008
