@@ -28,6 +28,9 @@ jobs:
         pip install flake8 pytest pytest-cov
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
+    - name: Reject server syntax and undefined-name errors
+      run: flake8 core/server tests/test_server.py --select=E9,F63,F7,F82 --show-source
+
     - name: Lint with flake8
       run: |
         flake8 . --count --exit-zero --max-line-length=127 --exclude="OLDER VERSIONS" --statistics
@@ -35,9 +38,6 @@ jobs:
     - name: Test with pytest
       run: |
         pytest --cov=. --cov-report=xml -q
-    - name: Test server (v3.1)
-      run: |
-        python -m pytest tests/test_server.py -q --tb=no || echo "server tests skipped if no deps"
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3

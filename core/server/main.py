@@ -10,6 +10,10 @@ import json
 import asyncio
 import logging
 import uuid
+from html import escape
+from urllib.parse import quote
+
+from jose import jwt
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field, asdict
@@ -257,13 +261,15 @@ async def stream_match(match_id: str):
 @app.get("/overlays/obs/{match_id}", response_class=HTMLResponse)
 async def obs_overlay(match_id: str):
     """Minimal HTML overlay for OBS. In real: use /stream json + JS poll or WS."""
-    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>Dart Overlay {match_id}</title>
+    safe_match_id = escape(match_id)
+    stream_url = json.dumps("/stream/" + quote(match_id, safe=""))
+    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>Dart Overlay {safe_match_id}</title>
 <style>body{{font-family:system-ui;margin:0;padding:12px;background:rgba(0,0,0,0.6);color:#fff}} .score{{font-size:28px}}</style>
 </head><body>
-<h3>🎯 Live — {match_id}</h3>
-<div id="s"></div>
+<h3>🎯 Live — {safe_match_id}</h3>
+<pre id="s"></pre>
 <script>
-async function poll(){{ try{{ const r=await fetch('/stream/{match_id}'); const j=await r.json(); document.getElementById('s').innerHTML = '<pre>'+JSON.stringify(j.scores||j,null,2)+'</pre>'; }}catch(e){{}} setTimeout(poll,800); }}
+async function poll(){{ try{{ const r=await fetch({stream_url}); const j=await r.json(); document.getElementById('s').textContent = JSON.stringify(j.scores||j,null,2); }}catch(e){{}} setTimeout(poll,800); }}
 poll();
 </script>
 </body></html>"""
